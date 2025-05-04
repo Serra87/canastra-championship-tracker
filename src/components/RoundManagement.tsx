@@ -395,7 +395,7 @@ export const RoundManagement: React.FC = () => {
             <div className="font-medium text-sm">Status da Rodada</div>
             <div className="flex items-center gap-2 mt-1">
               {rodadaAtualCompleta ? (
-                <Badge variant="success" className="bg-green-500">Completa</Badge>
+                <Badge variant="default" className="bg-green-500">Completa</Badge>
               ) : (
                 <Badge variant="outline">Em Andamento</Badge>
               )}
