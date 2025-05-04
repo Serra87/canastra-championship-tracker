@@ -122,6 +122,59 @@ export function restaurarVida(duplas: Dupla[], duplaId: DuplaId): Dupla[] {
 }
 
 /**
+ * Verifica se todas as partidas de uma rodada estão finalizadas
+ */
+export function rodadaCompleta(rodada?: Rodada): boolean {
+  if (!rodada || !Array.isArray(rodada.partidas) || rodada.partidas.length === 0) {
+    return false;
+  }
+  
+  return rodada.partidas.every(partida => partida.status === StatusPartida.FINALIZADA);
+}
+
+/**
+ * Obtém todos os vencedores de uma rodada
+ */
+export function obterVencedoresDaRodada(rodada?: Rodada): DuplaId[] {
+  if (!rodada || !Array.isArray(rodada.partidas)) {
+    return [];
+  }
+  
+  return rodada.partidas
+    .filter(partida => partida.status === StatusPartida.FINALIZADA && partida.vencedor)
+    .map(partida => partida.vencedor as DuplaId);
+}
+
+/**
+ * Gera um placar público para exibição externa
+ */
+export function gerarPlacarPublico(torneio: Torneio) {
+  if (!Array.isArray(torneio.rodadas) || !Array.isArray(torneio.duplas)) {
+    return [];
+  }
+  
+  const buscarNomeDaDupla = (duplaId?: DuplaId): string => {
+    if (!duplaId) return "Desconhecido";
+    const dupla = torneio.duplas.find(d => d.id === duplaId);
+    return dupla?.nome || "Desconhecido";
+  };
+  
+  return torneio.rodadas
+    .filter(r => Array.isArray(r.partidas) && r.partidas.every(p => p.vencedor))
+    .sort((a, b) => a.numero - b.numero)
+    .map(rodada => ({
+      rodada: rodada.numero,
+      partidas: rodada.partidas.map(p => ({
+        duplaA: buscarNomeDaDupla(p.duplaUmId),
+        duplaB: buscarNomeDaDupla(p.duplaDoisId),
+        pontosA: p.pontosDuplaUm,
+        pontosB: p.pontosDuplaDois,
+        vencedora: buscarNomeDaDupla(p.vencedor),
+      }))
+    }));
+}
+
+/**
  * Verifica e limpa dados do torneio corrompidos no localStorage
  */
 export function verificarELimparDadosTorneio(): Torneio {

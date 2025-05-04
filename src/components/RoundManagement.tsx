@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -45,15 +44,40 @@ import {
 } from "@/components/ui/table";
 import { useTournament } from "@/context/TournamentProvider";
 import { DuplaId, RodadaId, Dupla, StatusPartida, Rodada } from "@/types";
-import { Plus, CalendarPlus, Filter, List, Table as TableIcon } from "lucide-react";
+import { 
+  Plus, 
+  CalendarPlus, 
+  Filter, 
+  List, 
+  Table as TableIcon, 
+  ArrowRight,
+  AlertTriangle
+} from "lucide-react";
 import MatchCard from "./MatchCard";
-import { formatarData, verificarDuplaDisponivel } from "@/utils/tournamentUtils";
+import { 
+  formatarData, 
+  verificarDuplaDisponivel, 
+  rodadaCompleta, 
+  obterVencedoresDaRodada 
+} from "@/utils/tournamentUtils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export const RoundManagement: React.FC = () => {
   const { 
     torneio, 
     criarRodada, 
     criarPartida,
+    avancarRodada
   } = useTournament();
   
   const [isCreatingMatch, setIsCreatingMatch] = useState(false);
@@ -86,6 +110,15 @@ export const RoundManagement: React.FC = () => {
   // Get active teams (not eliminated) with safe access
   const duplasAtivas = torneio.duplas?.filter(dupla => !dupla.eliminada) || [];
 
+  // Verificar se a rodada atual está completa
+  const rodadaAtualCompleta = rodadaCompleta(rodadaAtual);
+  
+  // Obter vencedores da rodada atual
+  const vencedoresRodadaAtual = obterVencedoresDaRodada(rodadaAtual);
+  
+  // Verificar se é possível avançar para a próxima rodada
+  const podeAvancarRodada = rodadaAtualCompleta && vencedoresRodadaAtual.length >= 2;
+
   // Set selectedRodadaId initially to the current round if available
   useEffect(() => {
     if (rodadaAtual && !selectedRodadaId) {
@@ -103,6 +136,12 @@ export const RoundManagement: React.FC = () => {
       setSelectedDuplaUmId("");
       setSelectedDuplaDoisId("");
       setIsCreatingMatch(false);
+    }
+  };
+
+  const handleAdvanceRound = () => {
+    if (podeAvancarRodada) {
+      avancarRodada();
     }
   };
 
@@ -184,118 +223,163 @@ export const RoundManagement: React.FC = () => {
         </h2>
         <div className="flex flex-wrap gap-2">
           {rodadaAtual && (
-            <Dialog open={isCreatingMatch} onOpenChange={setIsCreatingMatch}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                  <Plus size={16} />
-                  <span>Criar Partida Manual</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Criar Nova Partida</DialogTitle>
-                  <DialogDescription>
-                    Selecione as duplas que jogarão esta partida.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="roundSelect">Rodada</Label>
-                    <Select
-                      value={selectedRodadaId || ""}
-                      onValueChange={setSelectedRodadaId}
-                    >
-                      <SelectTrigger id="roundSelect">
-                        <SelectValue placeholder="Selecione a rodada" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.isArray(rodadas) && rodadas.map(rodada => (
-                          <SelectItem key={rodada.id} value={rodada.id}>
-                            Rodada {rodada.numero} ({formatarData(rodada.criadaEm)})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="teamOne">Dupla 1</Label>
-                    <Select
-                      value={selectedDuplaUmId}
-                      onValueChange={handleSelectDuplaUm}
-                    >
-                      <SelectTrigger id="teamOne">
-                        <SelectValue placeholder="Selecione a primeira dupla" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.isArray(duplasAtivas) && duplasAtivas
-                          .filter(dupla => dupla.id !== selectedDuplaDoisId)
-                          .map(dupla => {
-                            const disponivel = selectedRodadaId ? 
-                              isDuplaDisponivel(dupla.id, selectedRodadaId) : true;
-                            
-                            return (
-                              <SelectItem 
-                                key={dupla.id} 
-                                value={dupla.id}
-                                disabled={!disponivel}
-                              >
-                                {dupla.nome} ({dupla.vidas} vidas)
-                                {!disponivel && " - Já participando"}
-                              </SelectItem>
-                            );
-                          })}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="teamTwo">Dupla 2</Label>
-                    <Select
-                      value={selectedDuplaDoisId}
-                      onValueChange={handleSelectDuplaDois}
-                    >
-                      <SelectTrigger id="teamTwo">
-                        <SelectValue placeholder="Selecione a segunda dupla" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.isArray(duplasAtivas) && duplasAtivas
-                          .filter(dupla => dupla.id !== selectedDuplaUmId)
-                          .map(dupla => {
-                            const disponivel = selectedRodadaId ? 
-                              isDuplaDisponivel(dupla.id, selectedRodadaId) : true;
+            <>
+              <Dialog open={isCreatingMatch} onOpenChange={setIsCreatingMatch}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Plus size={16} />
+                    <span>Criar Partida Manual</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Criar Nova Partida</DialogTitle>
+                    <DialogDescription>
+                      Selecione as duplas que jogarão esta partida.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="roundSelect">Rodada</Label>
+                      <Select
+                        value={selectedRodadaId || ""}
+                        onValueChange={setSelectedRodadaId}
+                      >
+                        <SelectTrigger id="roundSelect">
+                          <SelectValue placeholder="Selecione a rodada" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.isArray(rodadas) && rodadas.map(rodada => (
+                            <SelectItem key={rodada.id} value={rodada.id}>
+                              Rodada {rodada.numero} ({formatarData(rodada.criadaEm)})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="teamOne">Dupla 1</Label>
+                      <Select
+                        value={selectedDuplaUmId}
+                        onValueChange={handleSelectDuplaUm}
+                      >
+                        <SelectTrigger id="teamOne">
+                          <SelectValue placeholder="Selecione a primeira dupla" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.isArray(duplasAtivas) && duplasAtivas
+                            .filter(dupla => dupla.id !== selectedDuplaDoisId)
+                            .map(dupla => {
+                              const disponivel = selectedRodadaId ? 
+                                isDuplaDisponivel(dupla.id, selectedRodadaId) : true;
                               
-                            return (
-                              <SelectItem 
-                                key={dupla.id} 
-                                value={dupla.id}
-                                disabled={!disponivel}
-                              >
-                                {dupla.nome} ({dupla.vidas} vidas)
-                                {!disponivel && " - Já participando"}
-                              </SelectItem>
-                            );
-                          })}
-                      </SelectContent>
-                    </Select>
+                              return (
+                                <SelectItem 
+                                  key={dupla.id} 
+                                  value={dupla.id}
+                                  disabled={!disponivel}
+                                >
+                                  {dupla.nome} ({dupla.vidas} vidas)
+                                  {!disponivel && " - Já participando"}
+                                </SelectItem>
+                              );
+                            })}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="teamTwo">Dupla 2</Label>
+                      <Select
+                        value={selectedDuplaDoisId}
+                        onValueChange={handleSelectDuplaDois}
+                      >
+                        <SelectTrigger id="teamTwo">
+                          <SelectValue placeholder="Selecione a segunda dupla" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.isArray(duplasAtivas) && duplasAtivas
+                            .filter(dupla => dupla.id !== selectedDuplaUmId)
+                            .map(dupla => {
+                              const disponivel = selectedRodadaId ? 
+                                isDuplaDisponivel(dupla.id, selectedRodadaId) : true;
+                              
+                              return (
+                                <SelectItem 
+                                  key={dupla.id} 
+                                  value={dupla.id}
+                                  disabled={!disponivel}
+                                >
+                                  {dupla.nome} ({dupla.vidas} vidas)
+                                  {!disponivel && " - Já participando"}
+                                </SelectItem>
+                              );
+                            })}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsCreatingMatch(false)}
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsCreatingMatch(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleCreateMatch}
+                      disabled={!selectedRodadaId || !selectedDuplaUmId || !selectedDuplaDoisId}
+                    >
+                      Criar Partida
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    className="flex items-center gap-2" 
+                    variant="secondary" 
+                    disabled={!podeAvancarRodada}
                   >
-                    Cancelar
+                    <ArrowRight size={16} />
+                    <span>Avançar para Próxima Rodada</span>
                   </Button>
-                  <Button
-                    type="button"
-                    onClick={handleCreateMatch}
-                    disabled={!selectedRodadaId || !selectedDuplaUmId || !selectedDuplaDoisId}
-                  >
-                    Criar Partida
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Avançar para a próxima rodada?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {podeAvancarRodada ? (
+                        <>
+                          Esta ação criará automaticamente a rodada {rodadaAtual.numero + 1} com 
+                          {Math.floor(vencedoresRodadaAtual.length / 2)} partidas entre os vencedores 
+                          da rodada atual. Esta ação não pode ser desfeita.
+                        </>
+                      ) : (
+                        <div className="flex items-center gap-2 text-yellow-500">
+                          <AlertTriangle size={16} />
+                          <span>
+                            Todas as partidas da rodada atual devem ser finalizadas antes de avançar para a próxima rodada.
+                          </span>
+                        </div>
+                      )}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      disabled={!podeAvancarRodada}
+                      onClick={handleAdvanceRound}
+                    >
+                      Avançar
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
           )}
           <Button onClick={handleCreateRound} className="flex items-center gap-2">
             <CalendarPlus size={16} />
@@ -303,6 +387,41 @@ export const RoundManagement: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Status da Rodada */}
+      {rodadaAtual && (
+        <div className="bg-muted/30 rounded-lg p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <div className="font-medium text-sm">Status da Rodada</div>
+            <div className="flex items-center gap-2 mt-1">
+              {rodadaAtualCompleta ? (
+                <Badge variant="success" className="bg-green-500">Completa</Badge>
+              ) : (
+                <Badge variant="outline">Em Andamento</Badge>
+              )}
+              <span className="text-sm text-muted-foreground">
+                {rodadaAtual.partidas?.filter(p => p.status === StatusPartida.FINALIZADA).length || 0} / {rodadaAtual.partidas?.length || 0} partidas finalizadas
+              </span>
+            </div>
+          </div>
+          <div>
+            {rodadaAtualCompleta && vencedoresRodadaAtual.length >= 2 ? (
+              <Button 
+                size="sm" 
+                onClick={handleAdvanceRound}
+                className="flex items-center gap-1"
+              >
+                <ArrowRight size={14} />
+                Avançar para Rodada {rodadaAtual.numero + 1}
+              </Button>
+            ) : rodadaAtualCompleta ? (
+              <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                Rodada Final
+              </Badge>
+            ) : null}
+          </div>
+        </div>
+      )}
 
       {rodadaAtual && (
         <div className="space-y-4">

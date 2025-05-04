@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Torneio,
@@ -18,7 +17,10 @@ import {
   podeReinscrever,
   verificarDuplaDisponivel,
   restaurarVida,
-  verificarELimparDadosTorneio
+  verificarELimparDadosTorneio,
+  rodadaCompleta,
+  obterVencedoresDaRodada,
+  gerarPlacarPublico
 } from "../utils/tournamentUtils";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "@/components/ui/sonner";
@@ -121,7 +123,7 @@ export function useTournamentData() {
 
   // Operações de Rodadas - CORRIGIDO para usar o maior número + 1
   const criarRodada = (): Rodada => {
-    // Usar o maior número de rodada existente + 1, em vez de rodadaAtual + 1
+    // Usar o maior número de rodada existente + 1
     const rodadasArray = Array.isArray(torneio.rodadas) ? torneio.rodadas : [];
     const maiorNumero = Math.max(...rodadasArray.map(r => r.numero ?? 0).concat([0]));
     const novoNumero = maiorNumero + 1;
@@ -156,7 +158,89 @@ export function useTournamentData() {
     toast.success("Rodada finalizada");
   };
 
-  // Operações de Partidas - MELHORADO para adicionar mais validações
+  // Nova função para avançar para a próxima rodada automaticamente
+  const avancarRodada = () => {
+    // Encontrar a rodada atual
+    const rodadaAtual = Array.isArray(torneio.rodadas) 
+      ? torneio.rodadas.find(r => r.numero === torneio.rodadaAtual)
+      : undefined;
+    
+    // Verificar se a rodada atual está completa
+    if (!rodadaCompleta(rodadaAtual)) {
+      toast.error("Todas as partidas da rodada atual devem estar finalizadas antes de avançar");
+      return null;
+    }
+    
+    // Obter os vencedores da rodada atual
+    const vencedores = obterVencedoresDaRodada(rodadaAtual);
+    
+    // Verificar se há vencedores suficientes
+    if (vencedores.length < 2) {
+      toast.warning("Não há duplas suficientes para criar a próxima rodada");
+      return null;
+    }
+    
+    // Calcular o novo número da rodada
+    const rodadasArray = Array.isArray(torneio.rodadas) ? torneio.rodadas : [];
+    const maiorNumero = Math.max(...rodadasArray.map(r => r.numero ?? 0).concat([0]));
+    const novoNumero = maiorNumero + 1;
+    
+    // Criar partidas para a próxima rodada com os vencedores da rodada atual
+    const novasPartidas: Partida[] = [];
+    for (let i = 0; i < vencedores.length; i += 2) {
+      // Se houver um número ímpar de vencedores, o último avança automaticamente
+      if (i + 1 >= vencedores.length) {
+        toast.info(`A dupla ${torneio.duplas?.find(d => d.id === vencedores[i])?.nome} avança automaticamente`);
+        continue;
+      }
+      
+      // Criar a partida entre os vencedores
+      novasPartidas.push({
+        id: uuidv4(),
+        rodadaId: "", // Será atualizado após a criação da rodada
+        duplaUmId: vencedores[i],
+        duplaDoisId: vencedores[i + 1],
+        pontosDuplaUm: 0,
+        pontosDuplaDois: 0,
+        status: StatusPartida.AGUARDANDO
+      });
+    }
+    
+    // Criar a nova rodada
+    const novaRodada: Rodada = {
+      id: uuidv4(),
+      numero: novoNumero,
+      partidas: [],
+      completa: false,
+      criadaEm: new Date()
+    };
+    
+    // Atualizar os IDs das partidas com o ID da nova rodada
+    const partidasAtualizadas = novasPartidas.map(p => ({
+      ...p,
+      rodadaId: novaRodada.id
+    }));
+    
+    // Atualizar a rodada com as partidas
+    novaRodada.partidas = partidasAtualizadas;
+    
+    // Atualizar o estado do torneio
+    setTorneio(anterior => ({
+      ...anterior,
+      rodadas: [...(Array.isArray(anterior.rodadas) ? anterior.rodadas : []), novaRodada],
+      rodadaAtual: novoNumero
+    }));
+    
+    // Finalizar a rodada anterior
+    if (rodadaAtual) {
+      completarRodada(rodadaAtual.id);
+    }
+    
+    toast.success(`Rodada ${novoNumero} criada com ${partidasAtualizadas.length} partidas`);
+    return novaRodada;
+  };
+
+  // Operações de Partidas
   const criarPartida = (duplaUmId: DuplaId, duplaDoisId: DuplaId, rodadaId: RodadaId): Partida | null => {
     // Validar IDs
     if (!duplaUmId || !duplaDoisId || !rodadaId) {
@@ -516,12 +600,15 @@ export function useTournamentData() {
     // Operações de rodadas
     criarRodada,
     completarRodada,
+    avancarRodada,  // Nova função exportada
     // Operações de partidas
     criarPartida,
     atualizarStatusPartida,
     atualizarPlacar,
     finalizarPartida,
     reverterResultadoPartida,
-    removerPartida
+    removerPartida,
+    // Utilitários
+    gerarPlacarPublico // Nova função exportada
   };
 }
