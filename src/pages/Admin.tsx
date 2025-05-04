@@ -1,7 +1,7 @@
 
 import React from "react";
 import AdminPanel from "@/components/AdminPanel";
-import { TournamentProvider } from "@/context/TournamentContext";
+import { TournamentProvider } from "@/context/TournamentProvider";
 
 const Admin = () => {
   return (
