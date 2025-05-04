@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { 
   Card, 
@@ -48,8 +49,8 @@ const MatchCard: React.FC<MatchCardProps> = ({ partida, duplaUm, duplaDois }) =>
   } = useTournament();
   
   const [isScoreDialogOpen, setIsScoreDialogOpen] = useState(false);
-  const [pontosDuplaUm, setPontosDuplaUm] = useState(partida.pontosDuplaUm);
-  const [pontosDuplaDois, setPontosDuplaDois] = useState(partida.pontosDuplaDois);
+  const [pontosDuplaUm, setPontosDuplaUm] = useState(partida?.pontosDuplaUm ?? 0);
+  const [pontosDuplaDois, setPontosDuplaDois] = useState(partida?.pontosDuplaDois ?? 0);
   const [isConfirmingReverse, setIsConfirmingReverse] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
@@ -126,6 +127,8 @@ const MatchCard: React.FC<MatchCardProps> = ({ partida, duplaUm, duplaDois }) =>
 
   // Determine status styling
   const getStatusBadge = () => {
+    if (!partida) return <Badge>Desconhecido</Badge>;
+    
     switch (partida.status) {
       case StatusPartida.AGUARDANDO:
         return (
@@ -152,15 +155,29 @@ const MatchCard: React.FC<MatchCardProps> = ({ partida, duplaUm, duplaDois }) =>
 
   // Calculate who is winning based on current score
   const getWinningTeam = () => {
-    if (partida.pontosDuplaUm === partida.pontosDuplaDois) return null;
+    if (!partida || partida.pontosDuplaUm === partida.pontosDuplaDois) return null;
     return partida.pontosDuplaUm > partida.pontosDuplaDois ? duplaUm : duplaDois;
   };
 
   const winningTeam = getWinningTeam();
-  const isFinished = partida.status === StatusPartida.FINALIZADA;
-  const isWaiting = partida.status === StatusPartida.AGUARDANDO;
-  const isInProgress = partida.status === StatusPartida.EM_ANDAMENTO;
+  const isFinished = partida?.status === StatusPartida.FINALIZADA;
+  const isWaiting = partida?.status === StatusPartida.AGUARDANDO;
+  const isInProgress = partida?.status === StatusPartida.EM_ANDAMENTO;
 
+  if (!partida) {
+    return (
+      <Card className="border-2 border-red-300 bg-red-50">
+        <CardHeader className="pb-2">
+          <Badge variant="destructive">Erro: Partida inválida</Badge>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-red-600">
+            Os dados desta partida são inválidos ou não estão disponíveis.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
   
   return (
     <Card className={`overflow-hidden ${isFinished ? 'border-green-300' : ''} card-shadow`}>
@@ -179,13 +196,13 @@ const MatchCard: React.FC<MatchCardProps> = ({ partida, duplaUm, duplaDois }) =>
         <div className="grid grid-cols-5 gap-2 items-center">
           {/* Dupla Um */}
           <div className="col-span-2 text-center">
-            <div className="font-semibold truncate">{duplaUm.nome}</div>
+            <div className="font-semibold truncate">{duplaUm?.nome}</div>
             <div className="text-xs text-muted-foreground">
-              {duplaUm.jogadores.map(p => p.nome).join(" e ")}
+              {Array.isArray(duplaUm?.jogadores) && duplaUm?.jogadores.map(p => p?.nome).join(" e ")}
             </div>
             <div className="mt-1">
-              <Badge variant={partida.vencedor === duplaUm.id ? "default" : "outline"}>
-                {duplaUm.vidas} vida{duplaUm.vidas !== 1 && "s"}
+              <Badge variant={partida.vencedor === duplaUm?.id ? "default" : "outline"}>
+                {duplaUm?.vidas ?? 0} vida{(duplaUm?.vidas !== 1) && "s"}
               </Badge>
             </div>
           </div>
@@ -195,19 +212,19 @@ const MatchCard: React.FC<MatchCardProps> = ({ partida, duplaUm, duplaDois }) =>
             {isWaiting ? (
               <span className="text-muted-foreground">VS</span>
             ) : (
-              <span>{partida.pontosDuplaUm} - {partida.pontosDuplaDois}</span>
+              <span>{partida.pontosDuplaUm ?? 0} - {partida.pontosDuplaDois ?? 0}</span>
             )}
           </div>
 
           {/* Dupla Dois */}
           <div className="col-span-2 text-center">
-            <div className="font-semibold truncate">{duplaDois.nome}</div>
+            <div className="font-semibold truncate">{duplaDois?.nome}</div>
             <div className="text-xs text-muted-foreground">
-              {duplaDois.jogadores.map(p => p.nome).join(" e ")}
+              {Array.isArray(duplaDois?.jogadores) && duplaDois?.jogadores.map(p => p?.nome).join(" e ")}
             </div>
             <div className="mt-1">
-              <Badge variant={partida.vencedor === duplaDois.id ? "default" : "outline"}>
-                {duplaDois.vidas} vida{duplaDois.vidas !== 1 && "s"}
+              <Badge variant={partida.vencedor === duplaDois?.id ? "default" : "outline"}>
+                {duplaDois?.vidas ?? 0} vida{(duplaDois?.vidas !== 1) && "s"}
               </Badge>
             </div>
           </div>
@@ -232,8 +249,6 @@ const MatchCard: React.FC<MatchCardProps> = ({ partida, duplaUm, duplaDois }) =>
             Iniciar Partida
           </Button>
         )}
-
-        
 
         {(isInProgress || isFinished) && (
           <Dialog open={isScoreDialogOpen} onOpenChange={setIsScoreDialogOpen}>
@@ -260,7 +275,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ partida, duplaUm, duplaDois }) =>
               <div className="grid grid-cols-5 gap-4 py-4 items-center">
                 <div className="col-span-2">
                   <div className="text-center font-semibold mb-2">
-                    {duplaUm.nome}
+                    {duplaUm?.nome}
                   </div>
                   <Input
                     type="number"
@@ -275,7 +290,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ partida, duplaUm, duplaDois }) =>
                 <div className="text-center font-bold">VS</div>
                 <div className="col-span-2">
                   <div className="text-center font-semibold mb-2">
-                    {duplaDois.nome}
+                    {duplaDois?.nome}
                   </div>
                   <Input
                     type="number"

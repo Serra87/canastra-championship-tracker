@@ -66,11 +66,25 @@ export const RoundManagement: React.FC = () => {
   const [itemsPerPage, setItemsPerPage] = useState(6);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Find current round
-  const rodadaAtual = torneio.rodadas.find(r => r.numero === torneio.rodadaAtual);
+  if (!torneio) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin w-10 h-10 border-4 border-primary border-t-transparent rounded-full"></div>
+          <p className="mt-4">Carregando dados do torneio...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Get active teams (not eliminated)
-  const duplasAtivas = torneio.duplas.filter(dupla => !dupla.eliminada);
+  // Safe access with fallbacks
+  const rodadas = torneio.rodadas || [];
+
+  // Find current round with safe access
+  const rodadaAtual = rodadas.find(r => r?.numero === torneio.rodadaAtual);
+
+  // Get active teams (not eliminated) with safe access
+  const duplasAtivas = torneio.duplas?.filter(dupla => !dupla.eliminada) || [];
 
   // Set selectedRodadaId initially to the current round if available
   useEffect(() => {
@@ -108,14 +122,15 @@ export const RoundManagement: React.FC = () => {
     }
   };
 
-  // Helper to get dupla by id
+  // Helper to get dupla by id with safe access
   const getDupla = (duplaId: DuplaId): Dupla | undefined => {
-    return torneio.duplas.find(dupla => dupla.id === duplaId);
+    return torneio.duplas?.find(dupla => dupla.id === duplaId);
   };
 
-  // Filter partidas based on status and team filters
+  // Filter partidas based on status and team filters with safe access
   const filtrarPartidas = (rodada: Rodada) => {
-    return rodada.partidas.filter(partida => {
+    const partidas = rodada?.partidas || [];
+    return partidas.filter(partida => {
       const statusMatch = filtroStatus === "TODOS" || partida.status === filtroStatus;
       const duplaMatch = !filtroDuplaId || 
                         partida.duplaUmId === filtroDuplaId || 
@@ -124,14 +139,15 @@ export const RoundManagement: React.FC = () => {
     });
   };
 
-  // Calculate match counts for a round
+  // Calculate match counts for a round with safe access
   const getMatchCounts = (rodada: Rodada) => {
-    const total = rodada.partidas.length;
-    const finished = rodada.partidas.filter(m => m.status === StatusPartida.FINALIZADA).length;
+    const partidas = rodada?.partidas || [];
+    const total = partidas.length;
+    const finished = partidas.filter(m => m.status === StatusPartida.FINALIZADA).length;
     return { total, finished };
   };
 
-  // Pagination logic for current round's matches
+  // Pagination logic for current round's matches with safe access
   const paginatedPartidas = (rodada?: Rodada) => {
     if (!rodada) return [];
     
@@ -142,18 +158,19 @@ export const RoundManagement: React.FC = () => {
     return partidasFiltradas.slice(startIndex, endIndex);
   };
 
-  // Total pages calculation
+  // Total pages calculation with safe access
   const getTotalPages = (rodada?: Rodada) => {
     if (!rodada) return 1;
     const partidasFiltradas = filtrarPartidas(rodada);
     return Math.ceil(partidasFiltradas.length / itemsPerPage);
   };
 
-  // Check if there are no matches in the current round
-  const noMatches = rodadaAtual && rodadaAtual.partidas.length === 0;
+  // Check if there are no matches in the current round with safe access
+  const noMatches = rodadaAtual && (rodadaAtual.partidas?.length ?? 0) === 0;
 
-  // Check if a team is available for selection in a specific round
+  // Check if a team is available for selection in a specific round with safe access
   const isDuplaDisponivel = (duplaId: DuplaId, rodadaId: RodadaId) => {
+    if (!torneio) return false;
     return verificarDuplaDisponivel(duplaId, rodadaId, torneio);
   };
 
@@ -192,7 +209,7 @@ export const RoundManagement: React.FC = () => {
                         <SelectValue placeholder="Selecione a rodada" />
                       </SelectTrigger>
                       <SelectContent>
-                        {torneio.rodadas.map(rodada => (
+                        {Array.isArray(rodadas) && rodadas.map(rodada => (
                           <SelectItem key={rodada.id} value={rodada.id}>
                             Rodada {rodada.numero} ({formatarData(rodada.criadaEm)})
                           </SelectItem>
@@ -210,7 +227,7 @@ export const RoundManagement: React.FC = () => {
                         <SelectValue placeholder="Selecione a primeira dupla" />
                       </SelectTrigger>
                       <SelectContent>
-                        {duplasAtivas
+                        {Array.isArray(duplasAtivas) && duplasAtivas
                           .filter(dupla => dupla.id !== selectedDuplaDoisId)
                           .map(dupla => {
                             const disponivel = selectedRodadaId ? 
@@ -240,7 +257,7 @@ export const RoundManagement: React.FC = () => {
                         <SelectValue placeholder="Selecione a segunda dupla" />
                       </SelectTrigger>
                       <SelectContent>
-                        {duplasAtivas
+                        {Array.isArray(duplasAtivas) && duplasAtivas
                           .filter(dupla => dupla.id !== selectedDuplaUmId)
                           .map(dupla => {
                             const disponivel = selectedRodadaId ? 
@@ -326,7 +343,7 @@ export const RoundManagement: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Todas as duplas</SelectItem>
-                    {torneio.duplas.map(dupla => (
+                    {Array.isArray(torneio.duplas) && torneio.duplas.map(dupla => (
                       <SelectItem key={dupla.id} value={dupla.id}>
                         {dupla.nome}
                       </SelectItem>
@@ -357,12 +374,12 @@ export const RoundManagement: React.FC = () => {
             </div>
           </div>
 
-          {rodadaAtual.partidas.length > 0 ? (
+          {rodadaAtual.partidas && rodadaAtual.partidas.length > 0 ? (
             <>
               {/* Visualização dos cards/tabela */}
               {viewMode === "cards" ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {paginatedPartidas(rodadaAtual).map(partida => {
+                  {Array.isArray(paginatedPartidas(rodadaAtual)) && paginatedPartidas(rodadaAtual).map(partida => {
                     const duplaUm = getDupla(partida.duplaUmId);
                     const duplaDois = getDupla(partida.duplaDoisId);
                     return (
@@ -388,7 +405,7 @@ export const RoundManagement: React.FC = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paginatedPartidas(rodadaAtual).map(partida => {
+                      {Array.isArray(paginatedPartidas(rodadaAtual)) && paginatedPartidas(rodadaAtual).map(partida => {
                         const duplaUm = getDupla(partida.duplaUmId);
                         const duplaDois = getDupla(partida.duplaDoisId);
                         
@@ -404,7 +421,9 @@ export const RoundManagement: React.FC = () => {
                             </TableCell>
                             <TableCell>
                               <div className="font-medium">{duplaUm.nome}</div>
-                              <div className="text-xs text-muted-foreground">{duplaUm.jogadores.map(j => j.nome).join(" e ")}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {Array.isArray(duplaUm.jogadores) && duplaUm.jogadores.map(j => j.nome).join(" e ")}
+                              </div>
                             </TableCell>
                             <TableCell className="text-center font-bold">
                               {partida.status === StatusPartida.AGUARDANDO 
@@ -413,7 +432,9 @@ export const RoundManagement: React.FC = () => {
                             </TableCell>
                             <TableCell>
                               <div className="font-medium">{duplaDois.nome}</div>
-                              <div className="text-xs text-muted-foreground">{duplaDois.jogadores.map(j => j.nome).join(" e ")}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {Array.isArray(duplaDois.jogadores) && duplaDois.jogadores.map(j => j.nome).join(" e ")}
+                              </div>
                             </TableCell>
                             <TableCell className="text-right">
                               <Button variant="ghost" size="sm" onClick={() => {
@@ -435,7 +456,7 @@ export const RoundManagement: React.FC = () => {
               )}
               
               {/* Paginação */}
-              {filtrarPartidas(rodadaAtual).length > itemsPerPage && (
+              {rodadaAtual && filtrarPartidas(rodadaAtual).length > itemsPerPage && (
                 <Pagination>
                   <PaginationContent>
                     <PaginationItem>
@@ -477,7 +498,7 @@ export const RoundManagement: React.FC = () => {
                 variant="outline" 
                 className="mt-2"
                 onClick={() => {
-                  setSelectedRodadaId(rodadaAtual.id);
+                  setSelectedRodadaId(rodadaAtual?.id);
                   setIsCreatingMatch(true);
                 }}
               >
@@ -489,11 +510,11 @@ export const RoundManagement: React.FC = () => {
         </div>
       )}
 
-      {torneio.rodadas.length > 0 && (
+      {torneio.rodadas && torneio.rodadas.length > 0 && (
         <div className="mt-8">
           <h3 className="font-semibold text-lg mb-4">Histórico de Rodadas</h3>
           <Accordion type="single" collapsible className="border rounded-md">
-            {torneio.rodadas
+            {Array.isArray(rodadas) && rodadas
               .sort((a, b) => b.numero - a.numero) // Sort in descending order
               .map(rodada => {
                 const { total, finished } = getMatchCounts(rodada);
@@ -513,9 +534,9 @@ export const RoundManagement: React.FC = () => {
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className="px-4 pb-4">
-                      {rodada.partidas.length > 0 ? (
+                      {rodada.partidas && rodada.partidas.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {rodada.partidas.map(partida => {
+                          {Array.isArray(rodada.partidas) && rodada.partidas.map(partida => {
                             const duplaUm = getDupla(partida.duplaUmId);
                             const duplaDois = getDupla(partida.duplaDoisId);
                             return (

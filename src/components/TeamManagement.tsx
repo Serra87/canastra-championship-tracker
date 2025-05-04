@@ -62,12 +62,12 @@ export const TeamManagement: React.FC = () => {
 
     const jogadores: Jogador[] = [
       {
-        id: selectedTeam?.jogadores[0]?.id || "player1",
+        id: selectedTeam?.jogadores?.[0]?.id || "player1",
         nome: player1Name,
         contato: player1Contact,
       },
       {
-        id: selectedTeam?.jogadores[1]?.id || "player2",
+        id: selectedTeam?.jogadores?.[1]?.id || "player2",
         nome: player2Name,
         contato: player2Contact,
       },
@@ -91,11 +91,11 @@ export const TeamManagement: React.FC = () => {
 
   const handleEdit = (team: any) => {
     setSelectedTeam(team);
-    setTeamName(team.nome);
-    setPlayer1Name(team.jogadores[0]?.nome || "");
-    setPlayer1Contact(team.jogadores[0]?.contato || "");
-    setPlayer2Name(team.jogadores[1]?.nome || "");
-    setPlayer2Contact(team.jogadores[1]?.contato || "");
+    setTeamName(team.nome || "");
+    setPlayer1Name(team.jogadores?.[0]?.nome || "");
+    setPlayer1Contact(team.jogadores?.[0]?.contato || "");
+    setPlayer2Name(team.jogadores?.[1]?.nome || "");
+    setPlayer2Contact(team.jogadores?.[1]?.contato || "");
     setIsEditingTeam(true);
   };
 
@@ -107,10 +107,14 @@ export const TeamManagement: React.FC = () => {
     reinscreverDupla(teamId);
   };
 
+  // Safe access to duplas array with fallback to empty array
+  const duplas = torneio?.duplas || [];
+  const rodadaAtual = torneio?.rodadaAtual ?? 0;
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Duplas ({torneio.duplas.length})</h2>
+        <h2 className="text-2xl font-bold">Duplas ({duplas.length})</h2>
         <Dialog open={isAddingTeam} onOpenChange={setIsAddingTeam}>
           <DialogTrigger asChild>
             <Button variant="default" className="flex items-center gap-2">
@@ -259,18 +263,18 @@ export const TeamManagement: React.FC = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {torneio.duplas.length === 0 ? (
+            {duplas.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-4">
                   Nenhuma dupla cadastrada.
                 </TableCell>
               </TableRow>
             ) : (
-              torneio.duplas.map((dupla) => (
+              Array.isArray(duplas) && duplas.map((dupla) => (
                 <TableRow key={dupla.id}>
                   <TableCell className="font-medium">{dupla.nome}</TableCell>
                   <TableCell>
-                    {dupla.jogadores.map((jogador) => jogador.nome).join(" e ")}
+                    {Array.isArray(dupla.jogadores) && dupla.jogadores.map((jogador) => jogador?.nome).join(" e ")}
                   </TableCell>
                   <TableCell className="text-center">
                     <span className="inline-flex justify-center items-center w-8 h-8 rounded-full bg-primary text-white font-bold">
@@ -297,7 +301,7 @@ export const TeamManagement: React.FC = () => {
                       >
                         <Edit size={16} />
                       </Button>
-                      {dupla.eliminada && torneio.rodadaAtual < 5 && (
+                      {dupla.eliminada && rodadaAtual < 5 && (
                         <Button
                           variant="outline"
                           size="sm"

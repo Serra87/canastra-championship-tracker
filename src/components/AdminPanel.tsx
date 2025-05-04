@@ -12,7 +12,7 @@ const AdminPanel: React.FC = () => {
   const { torneio, carregando } = useTournament();
   const [activeTab, setActiveTab] = useState("teams");
 
-  if (carregando) {
+  if (carregando || !torneio) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="flex flex-col items-center">

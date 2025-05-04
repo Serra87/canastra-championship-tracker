@@ -8,22 +8,33 @@ import { Partida, StatusPartida, Dupla } from "@/types";
 const LiveScoreboard: React.FC = () => {
   const { torneio } = useTournament();
   
-  // Find current round
-  const rodadaAtual = torneio.rodadas.find(r => r.numero === torneio.rodadaAtual);
+  if (!torneio) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin w-10 h-10 border-4 border-primary border-t-transparent rounded-full"></div>
+          <p className="mt-4">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
   
-  // Get active matches
-  const partidasAtivas = rodadaAtual?.partidas.filter(p => 
+  // Find current round
+  const rodadaAtual = torneio.rodadas?.find(r => r?.numero === torneio.rodadaAtual);
+  
+  // Get active matches - with safe access
+  const partidasAtivas = rodadaAtual?.partidas?.filter(p => 
     p.status === StatusPartida.EM_ANDAMENTO || p.status === StatusPartida.AGUARDANDO
   ) || [];
   
-  // Get completed matches for the current round
-  const partidasFinalizadas = rodadaAtual?.partidas.filter(p => 
+  // Get completed matches for the current round - with safe access
+  const partidasFinalizadas = rodadaAtual?.partidas?.filter(p => 
     p.status === StatusPartida.FINALIZADA
   ) || [];
 
-  // Helper to get team by id
+  // Helper to get team by id - with safe access
   const getDupla = (duplaId: string): Dupla | undefined => {
-    return torneio.duplas.find(dupla => dupla.id === duplaId);
+    return torneio.duplas?.find(dupla => dupla.id === duplaId);
   };
 
   return (
@@ -43,7 +54,7 @@ const LiveScoreboard: React.FC = () => {
             
             {partidasAtivas.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {partidasAtivas.map(partida => {
+                {Array.isArray(partidasAtivas) && partidasAtivas.map(partida => {
                   const duplaUm = getDupla(partida.duplaUmId);
                   const duplaDois = getDupla(partida.duplaDoisId);
                   
@@ -71,7 +82,7 @@ const LiveScoreboard: React.FC = () => {
             <div className="space-y-4">
               <h2 className="text-2xl font-bold text-center mb-6">RESULTADOS RECENTES</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {partidasFinalizadas.map(partida => {
+                {Array.isArray(partidasFinalizadas) && partidasFinalizadas.map(partida => {
                   const duplaUm = getDupla(partida.duplaUmId);
                   const duplaDois = getDupla(partida.duplaDoisId);
                   
@@ -126,10 +137,10 @@ const MatchScoreCard: React.FC<MatchCardProps> = ({ partida, duplaUm, duplaDois 
         <div className="grid grid-cols-5 gap-2 items-center">
           {/* Team One */}
           <div className="col-span-2 text-center">
-            <div className="font-semibold">{duplaUm.nome}</div>
+            <div className="font-semibold">{duplaUm?.nome}</div>
             <div className="mt-1">
               <Badge variant="outline">
-                {duplaUm.vidas} vida{duplaUm.vidas !== 1 && "s"}
+                {duplaUm?.vidas ?? 0} vida{(duplaUm?.vidas !== 1) && "s"}
               </Badge>
             </div>
           </div>
@@ -137,7 +148,7 @@ const MatchScoreCard: React.FC<MatchCardProps> = ({ partida, duplaUm, duplaDois 
           {/* Score */}
           <div className="text-center font-bold text-xl">
             {isInProgress ? (
-              <span>{partida.pontosDuplaUm} - {partida.pontosDuplaDois}</span>
+              <span>{partida?.pontosDuplaUm ?? 0} - {partida?.pontosDuplaDois ?? 0}</span>
             ) : (
               <span className="text-muted-foreground">VS</span>
             )}
@@ -145,10 +156,10 @@ const MatchScoreCard: React.FC<MatchCardProps> = ({ partida, duplaUm, duplaDois 
 
           {/* Team Two */}
           <div className="col-span-2 text-center">
-            <div className="font-semibold">{duplaDois.nome}</div>
+            <div className="font-semibold">{duplaDois?.nome}</div>
             <div className="mt-1">
               <Badge variant="outline">
-                {duplaDois.vidas} vida{duplaDois.vidas !== 1 && "s"}
+                {duplaDois?.vidas ?? 0} vida{(duplaDois?.vidas !== 1) && "s"}
               </Badge>
             </div>
           </div>
@@ -159,8 +170,8 @@ const MatchScoreCard: React.FC<MatchCardProps> = ({ partida, duplaUm, duplaDois 
 };
 
 const MatchResultCard: React.FC<MatchCardProps> = ({ partida, duplaUm, duplaDois }) => {
-  const winner = partida.vencedor === duplaUm.id ? duplaUm : duplaDois;
-  const loser = partida.vencedor !== duplaUm.id ? duplaUm : duplaDois;
+  const winner = partida.vencedor === duplaUm?.id ? duplaUm : duplaDois;
+  const loser = partida.vencedor !== duplaUm?.id ? duplaUm : duplaDois;
   
   return (
     <Card className="overflow-hidden border-green-300 bg-green-50/30 card-shadow">
@@ -170,20 +181,20 @@ const MatchResultCard: React.FC<MatchCardProps> = ({ partida, duplaUm, duplaDois
         </div>
         
         <div className="text-center font-bold text-xl mb-3">
-          {partida.pontosDuplaUm} - {partida.pontosDuplaDois}
+          {partida?.pontosDuplaUm ?? 0} - {partida?.pontosDuplaDois ?? 0}
         </div>
         
         <div className="space-y-2 text-center">
           <div>
             <Badge variant="default" className="mb-1">Vencedor</Badge>
-            <div className="font-semibold">{winner.nome}</div>
+            <div className="font-semibold">{winner?.nome}</div>
           </div>
           
           <div className="text-sm text-muted-foreground">vs</div>
           
           <div>
             <Badge variant="outline" className="mb-1">Perdedor</Badge>
-            <div className="font-semibold">{loser.nome}</div>
+            <div className="font-semibold">{loser?.nome}</div>
             <div className="text-xs text-red-500 mt-1">
               (-1 vida)
             </div>
