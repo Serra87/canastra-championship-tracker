@@ -85,7 +85,7 @@ export const RoundManagement: React.FC = () => {
   const [selectedDuplaUmId, setSelectedDuplaUmId] = useState<DuplaId | "">("");
   const [selectedDuplaDoisId, setSelectedDuplaDoisId] = useState<DuplaId | "">("");
   const [filtroStatus, setFiltroStatus] = useState<StatusPartida | "TODOS">("TODOS");
-  const [filtroDuplaId, setFiltroDuplaId] = useState<DuplaId | "">("");
+  const [filtroDuplaId, setFiltroDuplaId] = useState<DuplaId | "">("_all");
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
   const [itemsPerPage, setItemsPerPage] = useState(6);
   const [currentPage, setCurrentPage] = useState(1);
@@ -461,7 +461,7 @@ export const RoundManagement: React.FC = () => {
                     <SelectValue placeholder="Filtrar por dupla" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas as duplas</SelectItem>
+                    <SelectItem value="_all">Todas as duplas</SelectItem>
                     {Array.isArray(torneio.duplas) && torneio.duplas.map(dupla => (
                       <SelectItem key={dupla.id} value={dupla.id}>
                         {dupla.nome}
