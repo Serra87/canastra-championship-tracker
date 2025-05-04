@@ -1,5 +1,5 @@
 
-import { Dupla, Torneio, Partida, DuplaId, StatusPartida } from "../types";
+import { Dupla, Torneio, Partida, DuplaId, StatusPartida, RodadaId } from "../types";
 import { v4 as uuidv4 } from "uuid";
 
 /**
@@ -74,3 +74,36 @@ export function criarNovoTorneio(nome: string = "Torneio de Canastra 2025"): Tor
     rodadaAtual: 0
   };
 }
+
+/**
+ * Verifica se uma dupla já está participando de alguma partida na mesma rodada
+ */
+export function verificarDuplaDisponivel(duplaId: DuplaId, rodadaId: RodadaId, torneio: Torneio): boolean {
+  const rodada = torneio.rodadas.find(r => r.id === rodadaId);
+  if (!rodada) return true; // Se a rodada não existir, a dupla está disponível
+  
+  // Verificar se a dupla já está em alguma partida na rodada
+  const jaParticipando = rodada.partidas.some(
+    partida => partida.duplaUmId === duplaId || partida.duplaDoisId === duplaId
+  );
+  
+  return !jaParticipando; // Retorna true se a dupla estiver disponível
+}
+
+/**
+ * Restaura a vida de uma dupla (usado quando uma partida é removida)
+ */
+export function restaurarVida(duplas: Dupla[], duplaId: DuplaId): Dupla[] {
+  return duplas.map(dupla => {
+    if (dupla.id === duplaId) {
+      const novasVidas = dupla.vidas + 1;
+      return {
+        ...dupla,
+        vidas: novasVidas,
+        eliminada: false // Se a dupla havia sido eliminada, agora não está mais
+      };
+    }
+    return dupla;
+  });
+}
+

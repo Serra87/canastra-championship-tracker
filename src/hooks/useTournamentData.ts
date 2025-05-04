@@ -15,7 +15,9 @@ import {
   atualizarVidas,
   criarNovoTorneio,
   determinarVencedor,
-  podeReinscrever
+  podeReinscrever,
+  verificarDuplaDisponivel,
+  restaurarVida
 } from "../utils/tournamentUtils";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "@/components/ui/sonner";
@@ -146,7 +148,20 @@ export function useTournamentData() {
   };
 
   // Operações de Partidas
-  const criarPartida = (duplaUmId: DuplaId, duplaDoisId: DuplaId, rodadaId: RodadaId): Partida => {
+  const criarPartida = (duplaUmId: DuplaId, duplaDoisId: DuplaId, rodadaId: RodadaId): Partida | null => {
+    // Verificar se as duplas estão disponíveis nesta rodada
+    const duplaUmDisponivel = verificarDuplaDisponivel(duplaUmId, rodadaId, torneio);
+    const duplaDoisDisponivel = verificarDuplaDisponivel(duplaDoisId, rodadaId, torneio);
+
+    if (!duplaUmDisponivel || !duplaDoisDisponivel) {
+      const duplaIndisponivel = !duplaUmDisponivel 
+        ? torneio.duplas.find(d => d.id === duplaUmId)?.nome 
+        : torneio.duplas.find(d => d.id === duplaDoisId)?.nome;
+        
+      toast.error(`Dupla ${duplaIndisponivel} já está em uma partida nesta rodada`);
+      return null;
+    }
+
     const partida: Partida = {
       id: uuidv4(),
       rodadaId,
@@ -365,6 +380,46 @@ export function useTournamentData() {
     toast.success("Resultado da partida revertido");
   };
 
+  // Nova função para remover partida 
+  const removerPartida = (partidaId: PartidaId) => {
+    let partida: Partida | undefined;
+    
+    // Encontrar a partida primeiro para ver se está finalizada
+    torneio.rodadas.forEach(rodada => {
+      const partidaEncontrada = rodada.partidas.find(p => p.id === partidaId);
+      if (partidaEncontrada) {
+        partida = partidaEncontrada;
+      }
+    });
+    
+    if (!partida) {
+      toast.error("Partida não encontrada");
+      return;
+    }
+
+    // Verificar se precisa restaurar vida (se a partida estava finalizada)
+    let duplasAtualizadas = [...torneio.duplas];
+    if (partida.status === StatusPartida.FINALIZADA && partida.perdedor) {
+      duplasAtualizadas = restaurarVida(duplasAtualizadas, partida.perdedor);
+    }
+
+    // Remover a partida da rodada
+    setTorneio(anterior => {
+      const rodadasAtualizadas = anterior.rodadas.map(rodada => ({
+        ...rodada,
+        partidas: rodada.partidas.filter(p => p.id !== partidaId)
+      }));
+
+      return {
+        ...anterior,
+        duplas: duplasAtualizadas,
+        rodadas: rodadasAtualizadas
+      };
+    });
+    
+    toast.success("Partida removida com sucesso");
+  };
+
   // Retornar todas as operações e dados
   return {
     torneio,
@@ -382,6 +437,7 @@ export function useTournamentData() {
     atualizarStatusPartida,
     atualizarPlacar,
     finalizarPartida,
-    reverterResultadoPartida
+    reverterResultadoPartida,
+    removerPartida
   };
 }
