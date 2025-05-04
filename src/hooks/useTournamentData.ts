@@ -76,7 +76,7 @@ export function useTournamentData() {
 
     setTorneio(anterior => ({
       ...anterior,
-      duplas: [...anterior.duplas, novaDupla]
+      duplas: [...(Array.isArray(anterior.duplas) ? anterior.duplas : []), novaDupla]
     }));
 
     toast.success("Dupla adicionada com sucesso");
@@ -86,9 +86,11 @@ export function useTournamentData() {
   const atualizarDupla = (duplaAtualizada: Dupla) => {
     setTorneio(anterior => ({
       ...anterior,
-      duplas: anterior.duplas.map(dupla => 
-        dupla.id === duplaAtualizada.id ? duplaAtualizada : dupla
-      )
+      duplas: Array.isArray(anterior.duplas) 
+        ? anterior.duplas.map(dupla => 
+            dupla.id === duplaAtualizada.id ? duplaAtualizada : dupla
+          )
+        : [duplaAtualizada]
     }));
     toast.success("Dupla atualizada com sucesso");
   };
@@ -96,7 +98,9 @@ export function useTournamentData() {
   const removerDupla = (duplaId: DuplaId) => {
     setTorneio(anterior => ({
       ...anterior,
-      duplas: anterior.duplas.filter(dupla => dupla.id !== duplaId)
+      duplas: Array.isArray(anterior.duplas) 
+        ? anterior.duplas.filter(dupla => dupla.id !== duplaId)
+        : []
     }));
     toast.success("Dupla removida com sucesso");
   };
@@ -109,9 +113,11 @@ export function useTournamentData() {
 
     setTorneio(anterior => ({
       ...anterior,
-      duplas: anterior.duplas.map(dupla => 
-        dupla.id === duplaId ? { ...dupla, vidas: 1, eliminada: false, reinscrita: true } : dupla
-      )
+      duplas: Array.isArray(anterior.duplas) 
+        ? anterior.duplas.map(dupla => 
+            dupla.id === duplaId ? { ...dupla, vidas: 1, eliminada: false, reinscrita: true } : dupla
+          )
+        : []
     }));
     toast.success("Dupla reinscrita com sucesso");
   };
@@ -129,7 +135,7 @@ export function useTournamentData() {
 
     setTorneio(anterior => ({
       ...anterior,
-      rodadas: [...anterior.rodadas, novaRodada],
+      rodadas: [...(Array.isArray(anterior.rodadas) ? anterior.rodadas : []), novaRodada],
       rodadaAtual: novoNumero
     }));
 
@@ -140,9 +146,11 @@ export function useTournamentData() {
   const completarRodada = (rodadaId: RodadaId) => {
     setTorneio(anterior => ({
       ...anterior,
-      rodadas: anterior.rodadas.map(rodada => 
-        rodada.id === rodadaId ? { ...rodada, completa: true } : rodada
-      )
+      rodadas: Array.isArray(anterior.rodadas) 
+        ? anterior.rodadas.map(rodada => 
+            rodada.id === rodadaId ? { ...rodada, completa: true } : rodada
+          )
+        : []
     }));
     toast.success("Rodada finalizada");
   };
@@ -155,8 +163,8 @@ export function useTournamentData() {
 
     if (!duplaUmDisponivel || !duplaDoisDisponivel) {
       const duplaIndisponivel = !duplaUmDisponivel 
-        ? torneio.duplas.find(d => d.id === duplaUmId)?.nome 
-        : torneio.duplas.find(d => d.id === duplaDoisId)?.nome;
+        ? torneio.duplas?.find(d => d.id === duplaUmId)?.nome 
+        : torneio.duplas?.find(d => d.id === duplaDoisId)?.nome;
         
       toast.error(`Dupla ${duplaIndisponivel} já está em uma partida nesta rodada`);
       return null;
@@ -174,20 +182,22 @@ export function useTournamentData() {
 
     setTorneio(anterior => ({
       ...anterior,
-      rodadas: anterior.rodadas.map(rodada => {
-        if (rodada.id === rodadaId) {
-          return {
-            ...rodada,
-            partidas: [...rodada.partidas, partida]
-          };
-        }
-        return rodada;
-      })
+      rodadas: Array.isArray(anterior.rodadas) 
+        ? anterior.rodadas.map(rodada => {
+            if (rodada.id === rodadaId) {
+              return {
+                ...rodada,
+                partidas: [...(Array.isArray(rodada.partidas) ? rodada.partidas : []), partida]
+              };
+            }
+            return rodada;
+          })
+        : []
     }));
 
     // Obter nomes das duplas para o toast
-    const duplaUm = torneio.duplas.find(d => d.id === duplaUmId);
-    const duplaDois = torneio.duplas.find(d => d.id === duplaDoisId);
+    const duplaUm = torneio.duplas?.find(d => d.id === duplaUmId);
+    const duplaDois = torneio.duplas?.find(d => d.id === duplaDoisId);
     toast.success(`Partida criada`, {
       description: `${duplaUm?.nome} vs ${duplaDois?.nome}`
     });
@@ -198,22 +208,26 @@ export function useTournamentData() {
   const atualizarStatusPartida = (partidaId: PartidaId, status: StatusPartida) => {
     setTorneio(anterior => ({
       ...anterior,
-      rodadas: anterior.rodadas.map(rodada => ({
-        ...rodada,
-        partidas: rodada.partidas.map(partida => {
-          if (partida.id === partidaId) {
-            const partidaAtualizada = { ...partida, status };
-            
-            // Se mudando para EM_ANDAMENTO, definir hora de início
-            if (status === StatusPartida.EM_ANDAMENTO) {
-              partidaAtualizada.horaInicio = new Date();
-            }
-            
-            return partidaAtualizada;
-          }
-          return partida;
-        })
-      }))
+      rodadas: Array.isArray(anterior.rodadas) 
+        ? anterior.rodadas.map(rodada => ({
+            ...rodada,
+            partidas: Array.isArray(rodada.partidas)
+              ? rodada.partidas.map(partida => {
+                  if (partida.id === partidaId) {
+                    const partidaAtualizada = { ...partida, status };
+                    
+                    // Se mudando para EM_ANDAMENTO, definir hora de início
+                    if (status === StatusPartida.EM_ANDAMENTO) {
+                      partidaAtualizada.horaInicio = new Date();
+                    }
+                    
+                    return partidaAtualizada;
+                  }
+                  return partida;
+                })
+              : []
+          }))
+        : []
     }));
     
     const mensagensStatus = {
@@ -228,46 +242,56 @@ export function useTournamentData() {
   const atualizarPlacar = (partidaId: PartidaId, pontosDuplaUm: number, pontosDuplaDois: number) => {
     setTorneio(anterior => ({
       ...anterior,
-      rodadas: anterior.rodadas.map(rodada => ({
-        ...rodada,
-        partidas: rodada.partidas.map(partida => {
-          if (partida.id === partidaId) {
-            return { 
-              ...partida, 
-              pontosDuplaUm, 
-              pontosDuplaDois 
-            };
-          }
-          return partida;
-        })
-      }))
+      rodadas: Array.isArray(anterior.rodadas) 
+        ? anterior.rodadas.map(rodada => ({
+            ...rodada,
+            partidas: Array.isArray(rodada.partidas)
+              ? rodada.partidas.map(partida => {
+                  if (partida.id === partidaId) {
+                    return { 
+                      ...partida, 
+                      pontosDuplaUm, 
+                      pontosDuplaDois 
+                    };
+                  }
+                  return partida;
+                })
+              : []
+          }))
+        : []
     }));
   };
 
   const finalizarPartida = (partidaId: PartidaId, pontosDuplaUm: number, pontosDuplaDois: number) => {
     let partida: Partida | undefined;
-    let duplasAtualizadas: Dupla[] = [...torneio.duplas];
-    let rodadasAtualizadas = [...torneio.rodadas];
+    let duplasAtualizadas: Dupla[] = Array.isArray(torneio.duplas) ? [...torneio.duplas] : [];
+    let rodadasAtualizadas = Array.isArray(torneio.rodadas) ? [...torneio.rodadas] : [];
     
     // Encontrar a partida primeiro para trabalhar com ela
-    torneio.rodadas.forEach(rodada => {
-      const partidaEncontrada = rodada.partidas.find(p => p.id === partidaId);
-      if (partidaEncontrada) {
-        partida = partidaEncontrada;
-      }
-    });
+    if (Array.isArray(torneio.rodadas)) {
+      torneio.rodadas.forEach(rodada => {
+        if (Array.isArray(rodada.partidas)) {
+          const partidaEncontrada = rodada.partidas.find(p => p.id === partidaId);
+          if (partidaEncontrada) {
+            partida = partidaEncontrada;
+          }
+        }
+      });
+    }
     
     if (!partida) return;
     
     // Atualizar os pontos primeiro
     rodadasAtualizadas = rodadasAtualizadas.map(rodada => ({
       ...rodada,
-      partidas: rodada.partidas.map(p => {
-        if (p.id === partidaId) {
-          return { ...p, pontosDuplaUm, pontosDuplaDois };
-        }
-        return p;
-      })
+      partidas: Array.isArray(rodada.partidas)
+        ? rodada.partidas.map(p => {
+            if (p.id === partidaId) {
+              return { ...p, pontosDuplaUm, pontosDuplaDois };
+            }
+            return p;
+          })
+        : []
     }));
 
     // Determinar o vencedor e perdedor
@@ -280,20 +304,22 @@ export function useTournamentData() {
     // Atualizar a partida com resultado
     rodadasAtualizadas = rodadasAtualizadas.map(rodada => ({
       ...rodada,
-      partidas: rodada.partidas.map(p => {
-        if (p.id === partidaId) {
-          return {
-            ...p,
-            pontosDuplaUm,
-            pontosDuplaDois,
-            vencedor: vencedorId,
-            perdedor: perdedorId,
-            status: StatusPartida.FINALIZADA,
-            horaFim: new Date()
-          };
-        }
-        return p;
-      })
+      partidas: Array.isArray(rodada.partidas)
+        ? rodada.partidas.map(p => {
+            if (p.id === partidaId) {
+              return {
+                ...p,
+                pontosDuplaUm,
+                pontosDuplaDois,
+                vencedor: vencedorId,
+                perdedor: perdedorId,
+                status: StatusPartida.FINALIZADA,
+                horaFim: new Date()
+              };
+            }
+            return p;
+          })
+        : []
     }));
 
     // Atualizar as vidas do perdedor
@@ -307,8 +333,8 @@ export function useTournamentData() {
     }));
 
     // Encontrar duplas para mensagem toast
-    const duplaVencedora = torneio.duplas.find(d => d.id === vencedorId);
-    const duplaPerdedora = torneio.duplas.find(d => d.id === perdedorId);
+    const duplaVencedora = torneio.duplas?.find(d => d.id === vencedorId);
+    const duplaPerdedora = torneio.duplas?.find(d => d.id === perdedorId);
     
     if (duplaVencedora && duplaPerdedora) {
       toast.success(`Partida finalizada`, {
@@ -327,12 +353,16 @@ export function useTournamentData() {
     let partida: Partida | undefined;
     
     // Encontrar a partida primeiro
-    torneio.rodadas.forEach(rodada => {
-      const partidaEncontrada = rodada.partidas.find(p => p.id === partidaId);
-      if (partidaEncontrada && partidaEncontrada.status === StatusPartida.FINALIZADA) {
-        partida = partidaEncontrada;
-      }
-    });
+    if (Array.isArray(torneio.rodadas)) {
+      torneio.rodadas.forEach(rodada => {
+        if (Array.isArray(rodada.partidas)) {
+          const partidaEncontrada = rodada.partidas.find(p => p.id === partidaId);
+          if (partidaEncontrada && partidaEncontrada.status === StatusPartida.FINALIZADA) {
+            partida = partidaEncontrada;
+          }
+        }
+      });
+    }
     
     if (!partida || !partida.vencedor || !partida.perdedor) {
       toast.error("Não é possível reverter uma partida não finalizada");
@@ -342,33 +372,39 @@ export function useTournamentData() {
     // Reverter o resultado da partida e atualizar vidas
     setTorneio(anterior => {
       // Primeiro restaurar a vida do perdedor
-      const duplasAtualizadas = anterior.duplas.map(dupla => {
-        if (dupla.id === partida?.perdedor) {
-          return {
-            ...dupla,
-            vidas: dupla.vidas + 1,
-            eliminada: false
-          };
-        }
-        return dupla;
-      });
+      const duplasAtualizadas = Array.isArray(anterior.duplas)
+        ? anterior.duplas.map(dupla => {
+            if (dupla.id === partida?.perdedor) {
+              return {
+                ...dupla,
+                vidas: dupla.vidas + 1,
+                eliminada: false
+              };
+            }
+            return dupla;
+          })
+        : [];
 
       // Depois atualizar a partida
-      const rodadasAtualizadas = anterior.rodadas.map(rodada => ({
-        ...rodada,
-        partidas: rodada.partidas.map(p => {
-          if (p.id === partidaId) {
-            return {
-              ...p,
-              vencedor: undefined,
-              perdedor: undefined,
-              status: StatusPartida.EM_ANDAMENTO,
-              horaFim: undefined
-            };
-          }
-          return p;
-        })
-      }));
+      const rodadasAtualizadas = Array.isArray(anterior.rodadas)
+        ? anterior.rodadas.map(rodada => ({
+            ...rodada,
+            partidas: Array.isArray(rodada.partidas)
+              ? rodada.partidas.map(p => {
+                  if (p.id === partidaId) {
+                    return {
+                      ...p,
+                      vencedor: undefined,
+                      perdedor: undefined,
+                      status: StatusPartida.EM_ANDAMENTO,
+                      horaFim: undefined
+                    };
+                  }
+                  return p;
+                })
+              : []
+          }))
+        : [];
 
       return {
         ...anterior,
@@ -385,12 +421,16 @@ export function useTournamentData() {
     let partida: Partida | undefined;
     
     // Encontrar a partida primeiro para ver se está finalizada
-    torneio.rodadas.forEach(rodada => {
-      const partidaEncontrada = rodada.partidas.find(p => p.id === partidaId);
-      if (partidaEncontrada) {
-        partida = partidaEncontrada;
-      }
-    });
+    if (Array.isArray(torneio.rodadas)) {
+      torneio.rodadas.forEach(rodada => {
+        if (Array.isArray(rodada.partidas)) {
+          const partidaEncontrada = rodada.partidas.find(p => p.id === partidaId);
+          if (partidaEncontrada) {
+            partida = partidaEncontrada;
+          }
+        }
+      });
+    }
     
     if (!partida) {
       toast.error("Partida não encontrada");
@@ -398,17 +438,21 @@ export function useTournamentData() {
     }
 
     // Verificar se precisa restaurar vida (se a partida estava finalizada)
-    let duplasAtualizadas = [...torneio.duplas];
+    let duplasAtualizadas = Array.isArray(torneio.duplas) ? [...torneio.duplas] : [];
     if (partida.status === StatusPartida.FINALIZADA && partida.perdedor) {
       duplasAtualizadas = restaurarVida(duplasAtualizadas, partida.perdedor);
     }
 
     // Remover a partida da rodada
     setTorneio(anterior => {
-      const rodadasAtualizadas = anterior.rodadas.map(rodada => ({
-        ...rodada,
-        partidas: rodada.partidas.filter(p => p.id !== partidaId)
-      }));
+      const rodadasAtualizadas = Array.isArray(anterior.rodadas)
+        ? anterior.rodadas.map(rodada => ({
+            ...rodada,
+            partidas: Array.isArray(rodada.partidas)
+              ? rodada.partidas.filter(p => p.id !== partidaId)
+              : []
+          }))
+        : [];
 
       return {
         ...anterior,

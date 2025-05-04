@@ -13,17 +13,19 @@ export function podeReinscrever(dupla: Dupla, rodadaAtual: number): boolean {
  * Atualiza as vidas de uma dupla
  */
 export function atualizarVidas(duplas: Dupla[], perdedorId: DuplaId): Dupla[] {
-  return duplas.map(dupla => {
-    if (dupla.id === perdedorId) {
-      const novasVidas = dupla.vidas - 1;
-      return {
-        ...dupla,
-        vidas: novasVidas,
-        eliminada: novasVidas <= 0
-      };
-    }
-    return dupla;
-  });
+  return Array.isArray(duplas)
+    ? duplas.map(dupla => {
+        if (dupla.id === perdedorId) {
+          const novasVidas = dupla.vidas - 1;
+          return {
+            ...dupla,
+            vidas: novasVidas,
+            eliminada: novasVidas <= 0
+          };
+        }
+        return dupla;
+      })
+    : [];
 }
 
 /**
@@ -57,7 +59,10 @@ export function formatarData(data: Date): string {
  * Sorteia duplas ativas (não eliminadas) para partidas
  */
 export function sortearDuplasAtivas(torneio: Torneio): Dupla[] {
-  const duplasAtivas = torneio.duplas.filter(dupla => !dupla.eliminada);
+  const duplasAtivas = Array.isArray(torneio.duplas)
+    ? torneio.duplas.filter(dupla => !dupla.eliminada)
+    : [];
+    
   // Embaralhar o array de duplas ativas
   return [...duplasAtivas].sort(() => Math.random() - 0.5);
 }
@@ -69,8 +74,8 @@ export function criarNovoTorneio(nome: string = "Torneio de Canastra 2025"): Tor
   return {
     id: uuidv4(),
     nome,
-    duplas: [],
-    rodadas: [],
+    duplas: [], // Garantir que começa como array vazio
+    rodadas: [], // Garantir que começa como array vazio
     rodadaAtual: 0
   };
 }
@@ -79,8 +84,10 @@ export function criarNovoTorneio(nome: string = "Torneio de Canastra 2025"): Tor
  * Verifica se uma dupla já está participando de alguma partida na mesma rodada
  */
 export function verificarDuplaDisponivel(duplaId: DuplaId, rodadaId: RodadaId, torneio: Torneio): boolean {
+  if (!Array.isArray(torneio.rodadas)) return true;
+  
   const rodada = torneio.rodadas.find(r => r.id === rodadaId);
-  if (!rodada) return true; // Se a rodada não existir, a dupla está disponível
+  if (!rodada || !Array.isArray(rodada.partidas)) return true; // Se a rodada não existir, a dupla está disponível
   
   // Verificar se a dupla já está em alguma partida na rodada
   const jaParticipando = rodada.partidas.some(
@@ -94,16 +101,17 @@ export function verificarDuplaDisponivel(duplaId: DuplaId, rodadaId: RodadaId, t
  * Restaura a vida de uma dupla (usado quando uma partida é removida)
  */
 export function restaurarVida(duplas: Dupla[], duplaId: DuplaId): Dupla[] {
-  return duplas.map(dupla => {
-    if (dupla.id === duplaId) {
-      const novasVidas = dupla.vidas + 1;
-      return {
-        ...dupla,
-        vidas: novasVidas,
-        eliminada: false // Se a dupla havia sido eliminada, agora não está mais
-      };
-    }
-    return dupla;
-  });
+  return Array.isArray(duplas)
+    ? duplas.map(dupla => {
+        if (dupla.id === duplaId) {
+          const novasVidas = dupla.vidas + 1;
+          return {
+            ...dupla,
+            vidas: novasVidas,
+            eliminada: false // Se a dupla havia sido eliminada, agora não está mais
+          };
+        }
+        return dupla;
+      })
+    : [];
 }
-
