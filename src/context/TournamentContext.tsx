@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { 
   Tournament, 
@@ -424,8 +423,3 @@ export const useTournament = () => {
   }
   return context;
 };
-
-// Add a dependency for UUID
-<lov-add-dependency>uuid@latest</lov-add-dependency>
-<lov-add-dependency>@types/uuid@latest</lov-add-dependency>
-
