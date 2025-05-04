@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -89,6 +90,8 @@ export const RoundManagement: React.FC = () => {
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
   const [itemsPerPage, setItemsPerPage] = useState(6);
   const [currentPage, setCurrentPage] = useState(1);
+  // New state to track expanded accordion items
+  const [expandedRounds, setExpandedRounds] = useState<string[]>([]);
 
   if (!torneio) {
     return (
@@ -124,7 +127,11 @@ export const RoundManagement: React.FC = () => {
     if (rodadaAtual && !selectedRodadaId) {
       setSelectedRodadaId(rodadaAtual.id);
     }
-  }, [rodadaAtual, selectedRodadaId]);
+    // If current round changes, update the expanded rounds to include it
+    if (rodadaAtual && !expandedRounds.includes(rodadaAtual.id)) {
+      setExpandedRounds(prev => [...prev, rodadaAtual.id]);
+    }
+  }, [rodadaAtual, selectedRodadaId, expandedRounds]);
 
   const handleCreateRound = () => {
     criarRodada();
@@ -161,6 +168,11 @@ export const RoundManagement: React.FC = () => {
     }
   };
 
+  // Handler for when an accordion item changes state
+  const handleAccordionValueChange = (value: string[]) => {
+    setExpandedRounds(value);
+  };
+
   // Helper to get dupla by id with safe access
   const getDupla = (duplaId: DuplaId): Dupla | undefined => {
     return torneio.duplas?.find(dupla => dupla.id === duplaId);
@@ -172,6 +184,7 @@ export const RoundManagement: React.FC = () => {
     return partidas.filter(partida => {
       const statusMatch = filtroStatus === "TODOS" || partida.status === filtroStatus;
       const duplaMatch = !filtroDuplaId || 
+                        filtroDuplaId === "_all" ||
                         partida.duplaUmId === filtroDuplaId || 
                         partida.duplaDoisId === filtroDuplaId;
       return statusMatch && duplaMatch;
@@ -632,7 +645,12 @@ export const RoundManagement: React.FC = () => {
       {torneio.rodadas && torneio.rodadas.length > 0 && (
         <div className="mt-8">
           <h3 className="font-semibold text-lg mb-4">Histórico de Rodadas</h3>
-          <Accordion type="single" collapsible className="border rounded-md">
+          <Accordion 
+            type="multiple" 
+            value={expandedRounds} 
+            onValueChange={handleAccordionValueChange} 
+            className="border rounded-md"
+          >
             {Array.isArray(rodadas) && rodadas
               .sort((a, b) => b.numero - a.numero) // Sort in descending order
               .map(rodada => {
