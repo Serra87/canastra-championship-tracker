@@ -240,6 +240,60 @@ export function useTournamentData() {
     return novaRodada;
   };
 
+  // Nova função para remover uma rodada
+  const removerRodada = (rodadaId: RodadaId) => {
+    // Encontrar a rodada primeiro para verificações
+    const rodadaParaDeletar = Array.isArray(torneio.rodadas) 
+      ? torneio.rodadas.find(r => r.id === rodadaId) 
+      : undefined;
+
+    if (!rodadaParaDeletar) {
+      toast.error("Rodada não encontrada");
+      return;
+    }
+
+    // Verificar se há partidas finalizadas que precisam ter as vidas restauradas
+    let duplasAtualizadas = Array.isArray(torneio.duplas) ? [...torneio.duplas] : [];
+    
+    if (Array.isArray(rodadaParaDeletar.partidas)) {
+      rodadaParaDeletar.partidas.forEach(partida => {
+        if (partida.status === StatusPartida.FINALIZADA && partida.perdedor) {
+          // Restaurar vida da dupla perdedora
+          duplasAtualizadas = restaurarVida(duplasAtualizadas, partida.perdedor);
+        }
+      });
+    }
+
+    // Remover a rodada e atualizar a rodada atual se necessário
+    setTorneio(anterior => {
+      const rodadasAtualizadas = Array.isArray(anterior.rodadas)
+        ? anterior.rodadas.filter(r => r.id !== rodadaId)
+        : [];
+
+      // Se a rodada removida é a atual, ajustar o número da rodada atual
+      let novaRodadaAtual = anterior.rodadaAtual;
+      
+      if (rodadaParaDeletar.numero === anterior.rodadaAtual) {
+        // Encontrar a rodada anterior (ou a próxima disponível se não houver anterior)
+        if (rodadasAtualizadas.length > 0) {
+          const rodadasDisponiveis = rodadasAtualizadas.map(r => r.numero).sort((a, b) => b - a);
+          novaRodadaAtual = rodadasDisponiveis[0] || 0;
+        } else {
+          novaRodadaAtual = 0; // Nenhuma rodada disponível
+        }
+      }
+
+      return {
+        ...anterior,
+        duplas: duplasAtualizadas,
+        rodadas: rodadasAtualizadas,
+        rodadaAtual: novaRodadaAtual
+      };
+    });
+
+    toast.success(`Rodada ${rodadaParaDeletar.numero} excluída com sucesso`);
+  };
+
   // Operações de Partidas
   const criarPartida = (duplaUmId: DuplaId, duplaDoisId: DuplaId, rodadaId: RodadaId): Partida | null => {
     // Validar IDs
@@ -600,7 +654,8 @@ export function useTournamentData() {
     // Operações de rodadas
     criarRodada,
     completarRodada,
-    avancarRodada,  // Nova função exportada
+    avancarRodada,
+    removerRodada,
     // Operações de partidas
     criarPartida,
     atualizarStatusPartida,
@@ -609,6 +664,6 @@ export function useTournamentData() {
     reverterResultadoPartida,
     removerPartida,
     // Utilitários
-    gerarPlacarPublico // Nova função exportada
+    gerarPlacarPublico
   };
 }

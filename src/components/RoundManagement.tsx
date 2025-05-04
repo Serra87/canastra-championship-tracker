@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -52,7 +51,8 @@ import {
   List, 
   Table as TableIcon, 
   ArrowRight,
-  AlertTriangle
+  AlertTriangle,
+  Trash2 
 } from "lucide-react";
 import MatchCard from "./MatchCard";
 import { 
@@ -78,7 +78,8 @@ export const RoundManagement: React.FC = () => {
     torneio, 
     criarRodada, 
     criarPartida,
-    avancarRodada
+    avancarRodada,
+    removerRodada 
   } = useTournament();
   
   const [isCreatingMatch, setIsCreatingMatch] = useState(false);
@@ -90,8 +91,9 @@ export const RoundManagement: React.FC = () => {
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
   const [itemsPerPage, setItemsPerPage] = useState(6);
   const [currentPage, setCurrentPage] = useState(1);
-  // New state to track expanded accordion items
   const [expandedRounds, setExpandedRounds] = useState<string[]>([]);
+  const [rodadaParaExcluir, setRodadaParaExcluir] = useState<RodadaId | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   if (!torneio) {
     return (
@@ -104,30 +106,22 @@ export const RoundManagement: React.FC = () => {
     );
   }
 
-  // Safe access with fallbacks
   const rodadas = torneio.rodadas || [];
 
-  // Find current round with safe access
   const rodadaAtual = rodadas.find(r => r?.numero === torneio.rodadaAtual);
 
-  // Get active teams (not eliminated) with safe access
   const duplasAtivas = torneio.duplas?.filter(dupla => !dupla.eliminada) || [];
 
-  // Verificar se a rodada atual está completa
   const rodadaAtualCompleta = rodadaCompleta(rodadaAtual);
   
-  // Obter vencedores da rodada atual
   const vencedoresRodadaAtual = obterVencedoresDaRodada(rodadaAtual);
   
-  // Verificar se é possível avançar para a próxima rodada
   const podeAvancarRodada = rodadaAtualCompleta && vencedoresRodadaAtual.length >= 2;
 
-  // Set selectedRodadaId initially to the current round if available
   useEffect(() => {
     if (rodadaAtual && !selectedRodadaId) {
       setSelectedRodadaId(rodadaAtual.id);
     }
-    // If current round changes, update the expanded rounds to include it
     if (rodadaAtual && !expandedRounds.includes(rodadaAtual.id)) {
       setExpandedRounds(prev => [...prev, rodadaAtual.id]);
     }
@@ -154,7 +148,6 @@ export const RoundManagement: React.FC = () => {
 
   const handleSelectDuplaUm = (value: string) => {
     setSelectedDuplaUmId(value);
-    // Reset team two if it's the same as team one
     if (value === selectedDuplaDoisId) {
       setSelectedDuplaDoisId("");
     }
@@ -162,23 +155,19 @@ export const RoundManagement: React.FC = () => {
 
   const handleSelectDuplaDois = (value: string) => {
     setSelectedDuplaDoisId(value);
-    // Reset team one if it's the same as team two
     if (value === selectedDuplaUmId) {
       setSelectedDuplaUmId("");
     }
   };
 
-  // Handler for when an accordion item changes state
   const handleAccordionValueChange = (value: string[]) => {
     setExpandedRounds(value);
   };
 
-  // Helper to get dupla by id with safe access
   const getDupla = (duplaId: DuplaId): Dupla | undefined => {
     return torneio.duplas?.find(dupla => dupla.id === duplaId);
   };
 
-  // Filter partidas based on status and team filters with safe access
   const filtrarPartidas = (rodada: Rodada) => {
     const partidas = rodada?.partidas || [];
     return partidas.filter(partida => {
@@ -191,7 +180,6 @@ export const RoundManagement: React.FC = () => {
     });
   };
 
-  // Calculate match counts for a round with safe access
   const getMatchCounts = (rodada: Rodada) => {
     const partidas = rodada?.partidas || [];
     const total = partidas.length;
@@ -199,7 +187,6 @@ export const RoundManagement: React.FC = () => {
     return { total, finished };
   };
 
-  // Pagination logic for current round's matches with safe access
   const paginatedPartidas = (rodada?: Rodada) => {
     if (!rodada) return [];
     
@@ -210,20 +197,31 @@ export const RoundManagement: React.FC = () => {
     return partidasFiltradas.slice(startIndex, endIndex);
   };
 
-  // Total pages calculation with safe access
   const getTotalPages = (rodada?: Rodada) => {
     if (!rodada) return 1;
     const partidasFiltradas = filtrarPartidas(rodada);
     return Math.ceil(partidasFiltradas.length / itemsPerPage);
   };
 
-  // Check if there are no matches in the current round with safe access
   const noMatches = rodadaAtual && (rodadaAtual.partidas?.length ?? 0) === 0;
 
-  // Check if a team is available for selection in a specific round with safe access
   const isDuplaDisponivel = (duplaId: DuplaId, rodadaId: RodadaId) => {
     if (!torneio) return false;
     return verificarDuplaDisponivel(duplaId, rodadaId, torneio);
+  };
+
+  const handleDeleteRound = (rodadaId: RodadaId, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setRodadaParaExcluir(rodadaId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteRound = () => {
+    if (rodadaParaExcluir) {
+      removerRodada(rodadaParaExcluir);
+      setRodadaParaExcluir(null);
+      setIsDeleteDialogOpen(false);
+    }
   };
 
   return (
@@ -655,19 +653,37 @@ export const RoundManagement: React.FC = () => {
               .sort((a, b) => b.numero - a.numero) // Sort in descending order
               .map(rodada => {
                 const { total, finished } = getMatchCounts(rodada);
+                const isCurrentRound = rodada.numero === torneio.rodadaAtual;
                 return (
                   <AccordionItem key={rodada.id} value={rodada.id}>
-                    <AccordionTrigger className="px-4 hover:no-underline">
+                    <AccordionTrigger className="px-4 hover:no-underline group">
                       <div className="flex justify-between items-center w-full">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold">Rodada {rodada.numero}</span>
+                          <span className="font-semibold">
+                            Rodada {rodada.numero}
+                            {isCurrentRound && (
+                              <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                                Atual
+                              </span>
+                            )}
+                          </span>
                           <span className="text-sm text-muted-foreground">
                             ({formatarData(rodada.criadaEm)})
                           </span>
                         </div>
-                        <span className="text-sm px-2 py-1 rounded-full bg-secondary">
-                          {finished}/{total} partidas
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm px-2 py-1 rounded-full bg-secondary">
+                            {finished}/{total} partidas
+                          </span>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="opacity-0 group-hover:opacity-100 transition-opacity ml-2 h-8 w-8"
+                            onClick={(e) => handleDeleteRound(rodada.id, e)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className="px-4 pb-4">
@@ -711,6 +727,30 @@ export const RoundManagement: React.FC = () => {
                 );
               })}
           </Accordion>
+          
+          {/* Delete Confirmation Dialog */}
+          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir Rodada</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir esta rodada? 
+                  Esta ação irá remover todas as partidas associadas e restaurar as vidas 
+                  das duplas que perderam partidas nesta rodada.
+                  Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={confirmDeleteRound}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
     </div>
