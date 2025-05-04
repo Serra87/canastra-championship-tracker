@@ -3,7 +3,7 @@ import React from "react";
 import LiveScoreboard from "@/components/LiveScoreboard";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { TournamentProvider } from "@/context/TournamentContext";
+import { TournamentProvider } from "@/context/TournamentProvider";
 import { Settings } from "lucide-react";
 
 const Index = () => {

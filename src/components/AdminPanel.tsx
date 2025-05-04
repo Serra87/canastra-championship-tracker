@@ -2,17 +2,17 @@
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { useTournament } from "@/context/TournamentContext";
+import { useTournament } from "@/context/TournamentProvider";
 import TeamManagement from "./TeamManagement";
 import RoundManagement from "./RoundManagement";
 import { Link } from "react-router-dom";
 import { ArrowRight, BarChart3, Users } from "lucide-react";
 
 const AdminPanel: React.FC = () => {
-  const { tournament, isLoading } = useTournament();
+  const { torneio, carregando } = useTournament();
   const [activeTab, setActiveTab] = useState("teams");
 
-  if (isLoading) {
+  if (carregando) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="flex flex-col items-center">

@@ -31,15 +31,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useTournament } from "@/context/TournamentContext";
-import { Team, Player } from "@/types/tournament";
+import { useTournament } from "@/context/TournamentProvider";
+import { Jogador } from "@/types";
 import { Plus, Trash2, Edit, RefreshCcw } from "lucide-react";
 
 export const TeamManagement: React.FC = () => {
-  const { tournament, addTeam, updateTeam, deleteTeam, reregisterTeam } = useTournament();
+  const { torneio, adicionarDupla, atualizarDupla, removerDupla, reinscreverDupla } = useTournament();
   const [isAddingTeam, setIsAddingTeam] = useState(false);
   const [isEditingTeam, setIsEditingTeam] = useState(false);
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<any | null>(null);
   const [teamName, setTeamName] = useState("");
   const [player1Name, setPlayer1Name] = useState("");
   const [player1Contact, setPlayer1Contact] = useState("");
@@ -60,57 +60,57 @@ export const TeamManagement: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const players: Player[] = [
+    const jogadores: Jogador[] = [
       {
-        id: selectedTeam?.players[0]?.id || "player1",
-        name: player1Name,
-        contact: player1Contact,
+        id: selectedTeam?.jogadores[0]?.id || "player1",
+        nome: player1Name,
+        contato: player1Contact,
       },
       {
-        id: selectedTeam?.players[1]?.id || "player2",
-        name: player2Name,
-        contact: player2Contact,
+        id: selectedTeam?.jogadores[1]?.id || "player2",
+        nome: player2Name,
+        contato: player2Contact,
       },
     ];
 
     if (isEditingTeam && selectedTeam) {
-      updateTeam({
+      atualizarDupla({
         ...selectedTeam,
-        name: teamName,
-        players,
+        nome: teamName,
+        jogadores: jogadores,
       });
     } else {
-      addTeam({
-        name: teamName,
-        players,
+      adicionarDupla({
+        nome: teamName,
+        jogadores: jogadores,
       });
     }
 
     resetForm();
   };
 
-  const handleEdit = (team: Team) => {
+  const handleEdit = (team: any) => {
     setSelectedTeam(team);
-    setTeamName(team.name);
-    setPlayer1Name(team.players[0]?.name || "");
-    setPlayer1Contact(team.players[0]?.contact || "");
-    setPlayer2Name(team.players[1]?.name || "");
-    setPlayer2Contact(team.players[1]?.contact || "");
+    setTeamName(team.nome);
+    setPlayer1Name(team.jogadores[0]?.nome || "");
+    setPlayer1Contact(team.jogadores[0]?.contato || "");
+    setPlayer2Name(team.jogadores[1]?.nome || "");
+    setPlayer2Contact(team.jogadores[1]?.contato || "");
     setIsEditingTeam(true);
   };
 
   const handleDelete = (teamId: string) => {
-    deleteTeam(teamId);
+    removerDupla(teamId);
   };
 
   const handleReregister = (teamId: string) => {
-    reregisterTeam(teamId);
+    reinscreverDupla(teamId);
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Duplas ({tournament.teams.length})</h2>
+        <h2 className="text-2xl font-bold">Duplas ({torneio.duplas.length})</h2>
         <Dialog open={isAddingTeam} onOpenChange={setIsAddingTeam}>
           <DialogTrigger asChild>
             <Button variant="default" className="flex items-center gap-2">
@@ -259,26 +259,26 @@ export const TeamManagement: React.FC = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tournament.teams.length === 0 ? (
+            {torneio.duplas.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-4">
                   Nenhuma dupla cadastrada.
                 </TableCell>
               </TableRow>
             ) : (
-              tournament.teams.map((team) => (
-                <TableRow key={team.id}>
-                  <TableCell className="font-medium">{team.name}</TableCell>
+              torneio.duplas.map((dupla) => (
+                <TableRow key={dupla.id}>
+                  <TableCell className="font-medium">{dupla.nome}</TableCell>
                   <TableCell>
-                    {team.players.map((player) => player.name).join(" e ")}
+                    {dupla.jogadores.map((jogador) => jogador.nome).join(" e ")}
                   </TableCell>
                   <TableCell className="text-center">
                     <span className="inline-flex justify-center items-center w-8 h-8 rounded-full bg-primary text-white font-bold">
-                      {team.lives}
+                      {dupla.vidas}
                     </span>
                   </TableCell>
                   <TableCell className="text-center">
-                    {team.eliminated ? (
+                    {dupla.eliminada ? (
                       <span className="px-2 py-1 rounded-full bg-red-100 text-red-800 text-xs font-medium">
                         Eliminada
                       </span>
@@ -293,15 +293,15 @@ export const TeamManagement: React.FC = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleEdit(team)}
+                        onClick={() => handleEdit(dupla)}
                       >
                         <Edit size={16} />
                       </Button>
-                      {team.eliminated && tournament.currentRound < 5 && (
+                      {dupla.eliminada && torneio.rodadaAtual < 5 && (
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleReregister(team.id)}
+                          onClick={() => handleReregister(dupla.id)}
                           title="Reinscrever"
                         >
                           <RefreshCcw size={16} />
@@ -325,7 +325,7 @@ export const TeamManagement: React.FC = () => {
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancelar</AlertDialogCancel>
                             <AlertDialogAction
-                              onClick={() => handleDelete(team.id)}
+                              onClick={() => handleDelete(dupla.id)}
                             >
                               Excluir
                             </AlertDialogAction>

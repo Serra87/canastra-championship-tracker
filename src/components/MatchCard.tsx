@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { 
   Card, 
@@ -162,6 +161,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ partida, duplaUm, duplaDois }) =>
   const isWaiting = partida.status === StatusPartida.AGUARDANDO;
   const isInProgress = partida.status === StatusPartida.EM_ANDAMENTO;
 
+  
   return (
     <Card className={`overflow-hidden ${isFinished ? 'border-green-300' : ''} card-shadow`}>
       <CardHeader className={`pb-2 flex flex-row justify-between ${isFinished ? 'bg-green-50' : ''}`}>
@@ -232,6 +232,8 @@ const MatchCard: React.FC<MatchCardProps> = ({ partida, duplaUm, duplaDois }) =>
             Iniciar Partida
           </Button>
         )}
+
+        
 
         {(isInProgress || isFinished) && (
           <Dialog open={isScoreDialogOpen} onOpenChange={setIsScoreDialogOpen}>

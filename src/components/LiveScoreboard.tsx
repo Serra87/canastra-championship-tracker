@@ -2,28 +2,28 @@
 import React from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useTournament } from "@/context/TournamentContext";
-import { Match, MatchStatus, Team } from "@/types/tournament";
+import { useTournament } from "@/context/TournamentProvider";
+import { Partida, StatusPartida, Dupla } from "@/types";
 
 const LiveScoreboard: React.FC = () => {
-  const { tournament } = useTournament();
+  const { torneio } = useTournament();
   
   // Find current round
-  const currentRound = tournament.rounds.find(r => r.roundNumber === tournament.currentRound);
+  const rodadaAtual = torneio.rodadas.find(r => r.numero === torneio.rodadaAtual);
   
   // Get active matches
-  const activeMatches = currentRound?.matches.filter(m => 
-    m.status === MatchStatus.IN_PROGRESS || m.status === MatchStatus.WAITING
+  const partidasAtivas = rodadaAtual?.partidas.filter(p => 
+    p.status === StatusPartida.EM_ANDAMENTO || p.status === StatusPartida.AGUARDANDO
   ) || [];
   
   // Get completed matches for the current round
-  const completedMatches = currentRound?.matches.filter(m => 
-    m.status === MatchStatus.FINISHED
+  const partidasFinalizadas = rodadaAtual?.partidas.filter(p => 
+    p.status === StatusPartida.FINALIZADA
   ) || [];
 
   // Helper to get team by id
-  const getTeam = (teamId: string): Team | undefined => {
-    return tournament.teams.find(team => team.id === teamId);
+  const getDupla = (duplaId: string): Dupla | undefined => {
+    return torneio.duplas.find(dupla => dupla.id === duplaId);
   };
 
   return (
@@ -31,30 +31,30 @@ const LiveScoreboard: React.FC = () => {
       <div className="text-center">
         <h1 className="text-3xl font-bold mt-8 mb-2">TORNEIO DE CANASTRA 2025</h1>
         <p className="text-xl">
-          {currentRound ? `RODADA ${currentRound.roundNumber}` : "Torneio não iniciado"}
+          {rodadaAtual ? `RODADA ${rodadaAtual.numero}` : "Torneio não iniciado"}
         </p>
       </div>
       
-      {currentRound && (
+      {rodadaAtual && (
         <div className="space-y-8">
           {/* Active Matches Section */}
           <div className="space-y-4">
             <h2 className="text-2xl font-bold text-center mb-6">PARTIDAS EM ANDAMENTO</h2>
             
-            {activeMatches.length > 0 ? (
+            {partidasAtivas.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {activeMatches.map(match => {
-                  const teamOne = getTeam(match.teamOneId);
-                  const teamTwo = getTeam(match.teamTwoId);
+                {partidasAtivas.map(partida => {
+                  const duplaUm = getDupla(partida.duplaUmId);
+                  const duplaDois = getDupla(partida.duplaDoisId);
                   
-                  if (!teamOne || !teamTwo) return null;
+                  if (!duplaUm || !duplaDois) return null;
                   
                   return (
                     <MatchScoreCard 
-                      key={match.id}
-                      match={match}
-                      teamOne={teamOne}
-                      teamTwo={teamTwo}
+                      key={partida.id}
+                      partida={partida}
+                      duplaUm={duplaUm}
+                      duplaDois={duplaDois}
                     />
                   );
                 })}
@@ -67,22 +67,22 @@ const LiveScoreboard: React.FC = () => {
           </div>
           
           {/* Recent Results Section */}
-          {completedMatches.length > 0 && (
+          {partidasFinalizadas.length > 0 && (
             <div className="space-y-4">
               <h2 className="text-2xl font-bold text-center mb-6">RESULTADOS RECENTES</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {completedMatches.map(match => {
-                  const teamOne = getTeam(match.teamOneId);
-                  const teamTwo = getTeam(match.teamTwoId);
+                {partidasFinalizadas.map(partida => {
+                  const duplaUm = getDupla(partida.duplaUmId);
+                  const duplaDois = getDupla(partida.duplaDoisId);
                   
-                  if (!teamOne || !teamTwo) return null;
+                  if (!duplaUm || !duplaDois) return null;
                   
                   return (
                     <MatchResultCard 
-                      key={match.id}
-                      match={match}
-                      teamOne={teamOne}
-                      teamTwo={teamTwo}
+                      key={partida.id}
+                      partida={partida}
+                      duplaUm={duplaUm}
+                      duplaDois={duplaDois}
                     />
                   );
                 })}
@@ -92,7 +92,7 @@ const LiveScoreboard: React.FC = () => {
         </div>
       )}
 
-      {!currentRound && (
+      {!rodadaAtual && (
         <div className="flex flex-col items-center justify-center h-64">
           <div className="text-6xl text-muted-foreground">🃏</div>
           <h2 className="text-2xl mt-4">O torneio começará em breve</h2>
@@ -104,13 +104,13 @@ const LiveScoreboard: React.FC = () => {
 };
 
 interface MatchCardProps {
-  match: Match;
-  teamOne: Team;
-  teamTwo: Team;
+  partida: Partida;
+  duplaUm: Dupla;
+  duplaDois: Dupla;
 }
 
-const MatchScoreCard: React.FC<MatchCardProps> = ({ match, teamOne, teamTwo }) => {
-  const isInProgress = match.status === MatchStatus.IN_PROGRESS;
+const MatchScoreCard: React.FC<MatchCardProps> = ({ partida, duplaUm, duplaDois }) => {
+  const isInProgress = partida.status === StatusPartida.EM_ANDAMENTO;
   
   return (
     <Card className="overflow-hidden card-shadow">
@@ -119,17 +119,17 @@ const MatchScoreCard: React.FC<MatchCardProps> = ({ match, teamOne, teamTwo }) =
           {isInProgress ? "Em Andamento" : "Aguardando"}
         </Badge>
         <div className="text-xs text-muted-foreground">
-          Mesa {match.id.slice(-2)}
+          Mesa {partida.id.slice(-2)}
         </div>
       </CardHeader>
       <CardContent className="pt-6">
         <div className="grid grid-cols-5 gap-2 items-center">
           {/* Team One */}
           <div className="col-span-2 text-center">
-            <div className="font-semibold">{teamOne.name}</div>
+            <div className="font-semibold">{duplaUm.nome}</div>
             <div className="mt-1">
               <Badge variant="outline">
-                {teamOne.lives} vida{teamOne.lives !== 1 && "s"}
+                {duplaUm.vidas} vida{duplaUm.vidas !== 1 && "s"}
               </Badge>
             </div>
           </div>
@@ -137,7 +137,7 @@ const MatchScoreCard: React.FC<MatchCardProps> = ({ match, teamOne, teamTwo }) =
           {/* Score */}
           <div className="text-center font-bold text-xl">
             {isInProgress ? (
-              <span>{match.teamOneScore} - {match.teamTwoScore}</span>
+              <span>{partida.pontosDuplaUm} - {partida.pontosDuplaDois}</span>
             ) : (
               <span className="text-muted-foreground">VS</span>
             )}
@@ -145,10 +145,10 @@ const MatchScoreCard: React.FC<MatchCardProps> = ({ match, teamOne, teamTwo }) =
 
           {/* Team Two */}
           <div className="col-span-2 text-center">
-            <div className="font-semibold">{teamTwo.name}</div>
+            <div className="font-semibold">{duplaDois.nome}</div>
             <div className="mt-1">
               <Badge variant="outline">
-                {teamTwo.lives} vida{teamTwo.lives !== 1 && "s"}
+                {duplaDois.vidas} vida{duplaDois.vidas !== 1 && "s"}
               </Badge>
             </div>
           </div>
@@ -158,9 +158,9 @@ const MatchScoreCard: React.FC<MatchCardProps> = ({ match, teamOne, teamTwo }) =
   );
 };
 
-const MatchResultCard: React.FC<MatchCardProps> = ({ match, teamOne, teamTwo }) => {
-  const winner = match.winner === teamOne.id ? teamOne : teamTwo;
-  const loser = match.winner !== teamOne.id ? teamOne : teamTwo;
+const MatchResultCard: React.FC<MatchCardProps> = ({ partida, duplaUm, duplaDois }) => {
+  const winner = partida.vencedor === duplaUm.id ? duplaUm : duplaDois;
+  const loser = partida.vencedor !== duplaUm.id ? duplaUm : duplaDois;
   
   return (
     <Card className="overflow-hidden border-green-300 bg-green-50/30 card-shadow">
@@ -170,20 +170,20 @@ const MatchResultCard: React.FC<MatchCardProps> = ({ match, teamOne, teamTwo }) 
         </div>
         
         <div className="text-center font-bold text-xl mb-3">
-          {match.teamOneScore} - {match.teamTwoScore}
+          {partida.pontosDuplaUm} - {partida.pontosDuplaDois}
         </div>
         
         <div className="space-y-2 text-center">
           <div>
             <Badge variant="default" className="mb-1">Vencedor</Badge>
-            <div className="font-semibold">{winner.name}</div>
+            <div className="font-semibold">{winner.nome}</div>
           </div>
           
           <div className="text-sm text-muted-foreground">vs</div>
           
           <div>
             <Badge variant="outline" className="mb-1">Perdedor</Badge>
-            <div className="font-semibold">{loser.name}</div>
+            <div className="font-semibold">{loser.nome}</div>
             <div className="text-xs text-red-500 mt-1">
               (-1 vida)
             </div>
