@@ -82,16 +82,21 @@ export function criarNovoTorneio(nome: string = "Torneio de Canastra 2025"): Tor
 
 /**
  * Verifica se uma dupla já está participando de alguma partida na mesma rodada
+ * Melhorada para tratar melhor os arrays vazios ou undefined
  */
 export function verificarDuplaDisponivel(duplaId: DuplaId, rodadaId: RodadaId, torneio: Torneio): boolean {
+  // Verifica se rodadas é um array válido
   if (!Array.isArray(torneio.rodadas)) return true;
   
-  const rodada = torneio.rodadas.find(r => r.id === rodadaId);
-  if (!rodada || !Array.isArray(rodada.partidas)) return true; // Se a rodada não existir, a dupla está disponível
+  // Encontra a rodada pelo ID
+  const rodada = torneio.rodadas.find(r => r?.id === rodadaId);
+  
+  // Verifica se a rodada existe e se partidas é um array válido
+  if (!rodada || !Array.isArray(rodada.partidas)) return true;
   
   // Verificar se a dupla já está em alguma partida na rodada
   const jaParticipando = rodada.partidas.some(
-    partida => partida.duplaUmId === duplaId || partida.duplaDoisId === duplaId
+    partida => partida?.duplaUmId === duplaId || partida?.duplaDoisId === duplaId
   );
   
   return !jaParticipando; // Retorna true se a dupla estiver disponível
@@ -114,4 +119,41 @@ export function restaurarVida(duplas: Dupla[], duplaId: DuplaId): Dupla[] {
         return dupla;
       })
     : [];
+}
+
+/**
+ * Verifica e limpa dados do torneio corrompidos no localStorage
+ */
+export function verificarELimparDadosTorneio(): Torneio {
+  try {
+    const dadosSalvos = localStorage.getItem("canastra-tournament");
+    
+    if (!dadosSalvos) {
+      return criarNovoTorneio();
+    }
+    
+    const torneio = JSON.parse(dadosSalvos);
+    
+    // Verificar se a estrutura básica é válida
+    if (!torneio || typeof torneio !== 'object') {
+      throw new Error("Estrutura de torneio inválida");
+    }
+    
+    // Verificar se as propriedades essenciais existem e são do tipo correto
+    if (!Array.isArray(torneio.duplas)) torneio.duplas = [];
+    if (!Array.isArray(torneio.rodadas)) torneio.rodadas = [];
+    if (typeof torneio.rodadaAtual !== 'number') torneio.rodadaAtual = 0;
+    if (!torneio.id) torneio.id = uuidv4();
+    if (!torneio.nome) torneio.nome = "Torneio de Canastra 2025";
+    
+    // Salvar os dados corrigidos
+    localStorage.setItem("canastra-tournament", JSON.stringify(torneio));
+    
+    return torneio;
+  } catch (erro) {
+    console.error("Dados do torneio corrompidos. Criando novo torneio:", erro);
+    const novoTorneio = criarNovoTorneio();
+    localStorage.setItem("canastra-tournament", JSON.stringify(novoTorneio));
+    return novoTorneio;
+  }
 }

@@ -17,18 +17,15 @@ import {
   determinarVencedor,
   podeReinscrever,
   verificarDuplaDisponivel,
-  restaurarVida
+  restaurarVida,
+  verificarELimparDadosTorneio
 } from "../utils/tournamentUtils";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "@/components/ui/sonner";
 
-// Função para obter o torneio do localStorage
+// Função para obter o torneio do localStorage com verificação de dados
 const obterTorneioDoStorage = (): Torneio => {
-  const torneioSalvo = localStorage.getItem("canastra-tournament");
-  if (torneioSalvo) {
-    return JSON.parse(torneioSalvo);
-  }
-  return criarNovoTorneio();
+  return verificarELimparDadosTorneio();
 };
 
 // Função para salvar o torneio no localStorage
@@ -122,9 +119,13 @@ export function useTournamentData() {
     toast.success("Dupla reinscrita com sucesso");
   };
 
-  // Operações de Rodadas
+  // Operações de Rodadas - CORRIGIDO para usar o maior número + 1
   const criarRodada = (): Rodada => {
-    const novoNumero = torneio.rodadaAtual + 1;
+    // Usar o maior número de rodada existente + 1, em vez de rodadaAtual + 1
+    const rodadasArray = Array.isArray(torneio.rodadas) ? torneio.rodadas : [];
+    const maiorNumero = Math.max(...rodadasArray.map(r => r.numero ?? 0).concat([0]));
+    const novoNumero = maiorNumero + 1;
+    
     const novaRodada: Rodada = {
       id: uuidv4(),
       numero: novoNumero,
@@ -155,8 +156,37 @@ export function useTournamentData() {
     toast.success("Rodada finalizada");
   };
 
-  // Operações de Partidas
+  // Operações de Partidas - MELHORADO para adicionar mais validações
   const criarPartida = (duplaUmId: DuplaId, duplaDoisId: DuplaId, rodadaId: RodadaId): Partida | null => {
+    // Validar IDs
+    if (!duplaUmId || !duplaDoisId || !rodadaId) {
+      toast.error("IDs inválidos ao criar partida");
+      return null;
+    }
+    
+    // Verificar se os IDs das duplas são diferentes
+    if (duplaUmId === duplaDoisId) {
+      toast.error("Uma dupla não pode jogar contra si mesma");
+      return null;
+    }
+
+    // Verificar se as duplas existem
+    const duplaUmExiste = Array.isArray(torneio.duplas) && torneio.duplas.some(d => d.id === duplaUmId);
+    const duplaDoisExiste = Array.isArray(torneio.duplas) && torneio.duplas.some(d => d.id === duplaDoisId);
+    
+    if (!duplaUmExiste || !duplaDoisExiste) {
+      toast.error("Uma ou ambas as duplas não existem");
+      return null;
+    }
+    
+    // Verificar se a rodada existe
+    const rodadaExiste = Array.isArray(torneio.rodadas) && torneio.rodadas.some(r => r.id === rodadaId);
+    
+    if (!rodadaExiste) {
+      toast.error("Rodada não encontrada");
+      return null;
+    }
+
     // Verificar se as duplas estão disponíveis nesta rodada
     const duplaUmDisponivel = verificarDuplaDisponivel(duplaUmId, rodadaId, torneio);
     const duplaDoisDisponivel = verificarDuplaDisponivel(duplaDoisId, rodadaId, torneio);
@@ -170,6 +200,7 @@ export function useTournamentData() {
       return null;
     }
 
+    // Criar a nova partida
     const partida: Partida = {
       id: uuidv4(),
       rodadaId,
@@ -180,26 +211,35 @@ export function useTournamentData() {
       status: StatusPartida.AGUARDANDO
     };
 
-    setTorneio(anterior => ({
-      ...anterior,
-      rodadas: Array.isArray(anterior.rodadas) 
+    // Atualizar o estado do torneio
+    setTorneio(anterior => {
+      // Verificar se rodadas é um array
+      const rodadasAtualizadas = Array.isArray(anterior.rodadas) 
         ? anterior.rodadas.map(rodada => {
             if (rodada.id === rodadaId) {
+              // Verificar se partidas é um array
+              const partidasAtuais = Array.isArray(rodada.partidas) ? rodada.partidas : [];
               return {
                 ...rodada,
-                partidas: [...(Array.isArray(rodada.partidas) ? rodada.partidas : []), partida]
+                partidas: [...partidasAtuais, partida]
               };
             }
             return rodada;
           })
-        : []
-    }));
+        : [];
+      
+      return {
+        ...anterior,
+        rodadas: rodadasAtualizadas
+      };
+    });
 
     // Obter nomes das duplas para o toast
-    const duplaUm = torneio.duplas?.find(d => d.id === duplaUmId);
-    const duplaDois = torneio.duplas?.find(d => d.id === duplaDoisId);
+    const duplaUm = Array.isArray(torneio.duplas) ? torneio.duplas.find(d => d.id === duplaUmId) : undefined;
+    const duplaDois = Array.isArray(torneio.duplas) ? torneio.duplas.find(d => d.id === duplaDoisId) : undefined;
+    
     toast.success(`Partida criada`, {
-      description: `${duplaUm?.nome} vs ${duplaDois?.nome}`
+      description: `${duplaUm?.nome || "Dupla 1"} vs ${duplaDois?.nome || "Dupla 2"}`
     });
 
     return partida;
